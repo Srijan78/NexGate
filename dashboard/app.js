@@ -110,8 +110,21 @@ async function startFirebaseListeners() {
     orderByChild,
     equalTo,
     update,
+    set,
   } =
     await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
+
+  // Start Reactive Heartbeat
+  function sendHeartbeat() {
+    try {
+      set(ref(db, 'system/last_active'), Date.now());
+    } catch (e) {
+      console.warn('[Dashboard] Heartbeat failed:', e);
+    }
+  }
+  // Fire immediately, then every 60 seconds
+  sendHeartbeat();
+  setInterval(sendHeartbeat, 60000);
 
   // Zone data listener
   for (const zone of ZONES) {

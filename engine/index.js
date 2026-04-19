@@ -220,6 +220,30 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// ─── Smart Heartbeat Logic ───────────────────────────────────────
+let lastActiveTimestamp = 0;
+let isSleeping = false;
+let sleepResolve = null;
+
+function startHeartbeatListener() {
+  const hbRef = db.ref('system/last_active');
+  hbRef.on('value', (snap) => {
+    const val = snap.val();
+    if (val) {
+      const wasIdle = Date.now() - lastActiveTimestamp > 15 * 60 * 1000;
+      lastActiveTimestamp = val;
+      if (wasIdle && isSleeping && sleepResolve) {
+        console.log(
+          `\n[WAKE UP] User activity detected! Reactivating Live Demo Mode.`
+        );
+        isSleeping = false;
+        sleepResolve(); // Resolves the sleep Promise instantly!
+        sleepResolve = null;
+      }
+    }
+  });
+}
+
 // ─── Main ────────────────────────────────────────────────────────
 async function main() {
   console.log('='.repeat(60));
@@ -248,8 +272,9 @@ async function main() {
   // Initialize alert manager
   initAlertManager(db);
 
-  // Start listening for zone data updates
+  // Start listening for zone data updates and heartbeats
   startZoneListeners();
+  startHeartbeatListener();
 
   // Wait a few seconds for initial readings to arrive
   console.log('[...] Waiting 5s for initial sensor data...');
@@ -264,8 +289,26 @@ async function main() {
     } catch (err) {
       console.error(`[ERROR] Prediction cycle failed: ${err.message}`);
     }
-    // Small gap between cycles
-    await sleep(2000);
+
+    // Smart Sleep Logic
+    const timeSinceActive = Date.now() - lastActiveTimestamp;
+    const isIdle = timeSinceActive > 15 * 60 * 1000; // 15 mins
+
+    if (isIdle) {
+      console.log(
+        `\n[DEEP SLEEP] System idle (no active dashboards). Hibernating for 30m to save free-tier credits...`
+      );
+      isSleeping = true;
+      await new Promise((resolve) => {
+        sleepResolve = resolve;
+        setTimeout(resolve, 30 * 60 * 1000); // Wait up to 30 mins
+      });
+      isSleeping = false;
+      sleepResolve = null;
+    } else {
+      // Small gap between normal cycles
+      await sleep(2000);
+    }
   }
 }
 
