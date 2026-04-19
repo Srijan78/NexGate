@@ -42,9 +42,7 @@ export function initAlertManager(firebaseDb) {
     const alert = snapshot.val();
     if (alert && alert.resolved === true) {
       activeAlerts.delete(alert.zone);
-      console.log(
-        `[AlertManager] Alert resolved for zone: ${alert.zone}`
-      );
+      console.log(`[AlertManager] Alert resolved for zone: ${alert.zone}`);
     }
   });
 
@@ -113,8 +111,7 @@ export async function processAlert(zone, prediction) {
     type: determineAlertType(zone.id, prediction),
     severity: riskLevel,
     message:
-      prediction.recommended_action ||
-      `High density alert for ${zone.name}`,
+      prediction.recommended_action || `High density alert for ${zone.name}`,
     predicted_density: prediction.predicted_density_10m,
     timestamp: new Date().toISOString(),
     resolved: false,

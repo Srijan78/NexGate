@@ -1,6 +1,27 @@
 {
   "rules": {
-    ".read": true,
-    ".write": true
+    "zones": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "alerts": {
+      ".read": true,
+      ".write": "auth != null",
+      "$alertId": {
+        "resolved": {
+          ".write": true
+        },
+        "resolved_at": {
+          ".write": true
+        },
+        "resolved_by": {
+          ".write": true
+        }
+      }
+    },
+    "concessions": {
+      ".read": true,
+      ".write": "auth != null"
+    }
   }
 }

@@ -1,12 +1,52 @@
 {
   "zones": [
-    { "id": "gate_north",   "name": "Gate North",           "capacity": 3000, "base_load": 35 },
-    { "id": "gate_south",   "name": "Gate South",           "capacity": 3000, "base_load": 30 },
-    { "id": "gate_east",    "name": "Gate East",            "capacity": 2000, "base_load": 25 },
-    { "id": "gate_west",    "name": "Gate West",            "capacity": 2000, "base_load": 20 },
-    { "id": "concourse_a",  "name": "Concourse A",          "capacity": 5000, "base_load": 40 },
-    { "id": "concourse_b",  "name": "Concourse B",          "capacity": 5000, "base_load": 38 },
-    { "id": "main_stand",   "name": "Main Stand Area",      "capacity": 8000, "base_load": 55 },
-    { "id": "exit_south",   "name": "Exit Corridor South",  "capacity": 4000, "base_load": 10 }
+    {
+      "id": "gate_north",
+      "name": "Gate North",
+      "capacity": 3000,
+      "base_load": 35
+    },
+    {
+      "id": "gate_south",
+      "name": "Gate South",
+      "capacity": 3000,
+      "base_load": 30
+    },
+    {
+      "id": "gate_east",
+      "name": "Gate East",
+      "capacity": 2000,
+      "base_load": 25
+    },
+    {
+      "id": "gate_west",
+      "name": "Gate West",
+      "capacity": 2000,
+      "base_load": 20
+    },
+    {
+      "id": "concourse_a",
+      "name": "Concourse A",
+      "capacity": 5000,
+      "base_load": 40
+    },
+    {
+      "id": "concourse_b",
+      "name": "Concourse B",
+      "capacity": 5000,
+      "base_load": 38
+    },
+    {
+      "id": "main_stand",
+      "name": "Main Stand Area",
+      "capacity": 8000,
+      "base_load": 55
+    },
+    {
+      "id": "exit_south",
+      "name": "Exit Corridor South",
+      "capacity": 4000,
+      "base_load": 10
+    }
   ]
 }
