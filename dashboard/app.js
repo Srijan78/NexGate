@@ -91,6 +91,8 @@ async function initFirebase() {
 
     firebaseApp = initializeApp(FIREBASE_CONFIG);
     db = getDatabase(firebaseApp);
+    window._firebaseApp = firebaseApp;
+    window._firebaseDb = db;
     console.log('[Dashboard] Firebase connected');
     return true;
   } catch (err) {
@@ -469,6 +471,7 @@ function startClock() {
 
 function startMockDataMode() {
   usingMockData = true;
+  window._usingMockData = true;
   console.log('[Dashboard] Mock data mode active — cycling every 5s');
 
   const eventEl = document.getElementById('event-context');

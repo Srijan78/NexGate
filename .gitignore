@@ -10,13 +10,19 @@ venv/
 
 # Secrets — NEVER commit these
 .env
+.env.example
 serviceAccountKey.json
 *.key
 
 # Documents (excluded per request)
 docs/
+*.doc
 *.docx
 *.pdf
+*.xls
+*.xlsx
+*.pptx
+*.csv
 
 # Build output
 dist/

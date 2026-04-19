@@ -22,11 +22,11 @@
         <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
           <rect width="32" height="32" rx="8" fill="url(#logo-grad)"/>
           <path d="M8 16L14 10L20 16L14 22Z" fill="white" opacity="0.9"/>
-          <path d="M14 16L20 10L26 16L20 22Z" fill="white" opacity="0.6"/>
+          <path d="M14 16L20 10L26 16L20 22Z" fill="white" opacity="0.5"/>
           <defs>
             <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32">
-              <stop stop-color="#6366f1"/>
-              <stop offset="1" stop-color="#8b5cf6"/>
+              <stop stop-color="#333333"/>
+              <stop offset="1" stop-color="#1a1a1a"/>
             </linearGradient>
           </defs>
         </svg>
@@ -121,7 +121,33 @@
     </div>
   </main>
 
+  <!-- ═══ Chatbot Panel ═══ -->
+  <div id="chatbot-panel" class="chatbot-panel">
+    <div class="chatbot-header">
+      <h3 class="chatbot-title">💬 NexGate Assistant</h3>
+      <div class="chatbot-header-actions">
+        <button id="chatbot-change-zone" class="chatbot-change-zone-btn" style="display:none">📍 Change Zone</button>
+        <button id="chatbot-toggle" class="chatbot-toggle-btn">✕</button>
+      </div>
+    </div>
+    <div id="chatbot-zone-status" class="chatbot-zone-status" style="display:none">
+      <!-- Live zone info card injected by chatbot.js -->
+    </div>
+    <div id="chatbot-zone-selector" class="chatbot-zone-selector">
+      <!-- 8 zone buttons injected by chatbot.js -->
+    </div>
+    <div id="chatbot-messages" class="chatbot-messages" style="display:none">
+      <!-- Chat messages injected by chatbot.js -->
+    </div>
+    <div id="chatbot-input-area" class="chatbot-input-area" style="display:none">
+      <input id="chatbot-input" type="text" placeholder="Ask about crowds, food, directions..." autocomplete="off" />
+      <button id="chatbot-send" class="chatbot-send-btn">➤</button>
+    </div>
+  </div>
+  <button id="chatbot-fab" class="chatbot-fab">💬</button>
+
   <!-- ═══ Firebase SDK (CDN) ═══ -->
   <script type="module" src="app.js"></script>
+  <script type="module" src="chatbot.js"></script>
 </body>
 </html>
