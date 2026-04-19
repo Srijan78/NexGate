@@ -1,0 +1,34 @@
+# Dependencies — CRITICAL: keeps repo under 10MB
+node_modules/
+package-lock.json
+yarn.lock
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# Secrets — NEVER commit these
+.env
+serviceAccountKey.json
+*.key
+
+# Build output
+dist/
+build/
+.firebase/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
