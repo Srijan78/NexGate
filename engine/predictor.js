@@ -85,15 +85,12 @@ function fallbackPrediction(zone, readings) {
 
   // Calculate trend from recent readings
   const densities = readings.map((r) => r.density);
-  const avgDensity =
-    densities.reduce((a, b) => a + b, 0) / densities.length;
+  const avgDensity = densities.reduce((a, b) => a + b, 0) / densities.length;
 
   // Simple linear trend
   let trend = 0;
   if (densities.length >= 2) {
-    trend =
-      (densities[densities.length - 1] - densities[0]) /
-      densities.length;
+    trend = (densities[densities.length - 1] - densities[0]) / densities.length;
   }
 
   const predicted10m = Math.min(100, Math.max(0, avgDensity + trend * 4));
@@ -108,9 +105,7 @@ function fallbackPrediction(zone, readings) {
   // Queue estimate
   const queueMultiplier =
     predicted10m > 85 ? 0.2 : predicted10m > 70 ? 0.1 : 0.03;
-  const predictedQueue = Math.round(
-    (zone.capacity || 3000) * queueMultiplier
-  );
+  const predictedQueue = Math.round((zone.capacity || 3000) * queueMultiplier);
 
   return {
     predicted_density_10m: Math.round(predicted10m * 10) / 10,
@@ -170,62 +165,86 @@ export async function predictZone(zone, eventContext = 'Match in progress') {
     return null;
   }
 
-  // Try Gemini first
+  // Try Gemini first with exponential backoff for rate limits (429s)
   if (model) {
-    try {
-      const prompt = buildPrompt(zone, readings, eventContext);
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      const prediction = JSON.parse(text);
+    let retries = 3;
+    let delayMs = 1000;
 
-      // Validate required fields
-      if (
-        typeof prediction.predicted_density_10m !== 'number' ||
-        typeof prediction.risk_level !== 'string'
-      ) {
-        throw new Error('Invalid prediction schema');
-      }
+    while (retries > 0) {
+      try {
+        const prompt = buildPrompt(zone, readings, eventContext);
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        const prediction = JSON.parse(text);
 
-      // Cache successful prediction
-      predictionCache.set(zone.id, {
-        ...prediction,
-        source: 'gemini',
-        cached_at: new Date().toISOString(),
-      });
+        // Validate required fields
+        if (
+          typeof prediction.predicted_density_10m !== 'number' ||
+          typeof prediction.risk_level !== 'string'
+        ) {
+          throw new Error('Invalid prediction schema');
+        }
 
-      console.log(
-        `  [${zone.id}] Gemini → risk=${prediction.risk_level} ` +
-          `density_10m=${prediction.predicted_density_10m}% ` +
-          `conf=${prediction.confidence}`
-      );
+        // Cache successful prediction
+        predictionCache.set(zone.id, {
+          ...prediction,
+          source: 'gemini',
+          cached_at: new Date().toISOString(),
+        });
 
-      return prediction;
-    } catch (err) {
-      console.warn(
-        `  [${zone.id}] Gemini failed: ${err.message} — using fallback`
-      );
+        console.log(
+          `  [${zone.id}] Gemini → risk=${prediction.risk_level} ` +
+            `density_10m=${prediction.predicted_density_10m}% ` +
+            `conf=${prediction.confidence}`
+        );
 
-      // Try cached prediction first
-      const cached = predictionCache.get(zone.id);
-      if (cached) {
-        console.log(`  [${zone.id}] Serving cached prediction from ${cached.cached_at}`);
-        return { ...cached, source: 'cache' };
+        return prediction;
+      } catch (err) {
+        // If it's a rate limit error, back off and retry
+        if (err.message.includes('429') && retries > 1) {
+          console.warn(
+            `  [${zone.id}] Gemini rate limit hit. Retrying in ${delayMs}ms...`
+          );
+          await new Promise((res) => setTimeout(res, delayMs));
+          delayMs *= 2; // Exponential backoff
+          retries--;
+          continue;
+        }
+
+        console.warn(
+          `  [${zone.id}] Gemini failed: ${err.message} — using fallback`
+        );
+
+        // Try cached prediction first
+        const cached = predictionCache.get(zone.id);
+        if (cached) {
+          console.log(
+            `  [${zone.id}] Serving cached prediction from ${cached.cached_at}`
+          );
+          return { ...cached, source: 'cache' };
+        }
+
+        break; // Break loop on non-retryable error
       }
     }
   }
 
   // Fallback: simple moving average
   const fallback = fallbackPrediction(zone, readings);
-  predictionCache.set(zone.id, {
+  const result = {
     ...fallback,
     source: 'fallback',
+  };
+
+  predictionCache.set(zone.id, {
+    ...result,
     cached_at: new Date().toISOString(),
   });
 
   console.log(
-    `  [${zone.id}] Fallback → risk=${fallback.risk_level} ` +
-      `density_10m=${fallback.predicted_density_10m}%`
+    `  [${zone.id}] Fallback → risk=${result.risk_level} ` +
+      `density_10m=${result.predicted_density_10m}%`
   );
 
-  return fallback;
+  return result;
 }

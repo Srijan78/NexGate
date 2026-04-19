@@ -19,15 +19,29 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initGemini, predictZone, recordReading } from './predictor.js';
-import { initAlertManager, processAlert, getActiveAlertCount } from './alertManager.js';
+import {
+  initAlertManager,
+  processAlert,
+  getActiveAlertCount,
+} from './alertManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ─── Configuration ───────────────────────────────────────────────
-const ZONE_INTERVAL_MS = 7500;  // 7.5 seconds between zone predictions
-const ZONES_CONFIG_PATH = path.join(__dirname, '..', 'simulator', 'zones_config.json');
-const EVENT_SCHEDULE_PATH = path.join(__dirname, '..', 'simulator', 'event_schedule.json');
+const ZONE_INTERVAL_MS = 7500; // 7.5 seconds between zone predictions
+const ZONES_CONFIG_PATH = path.join(
+  __dirname,
+  '..',
+  'simulator',
+  'zones_config.json'
+);
+const EVENT_SCHEDULE_PATH = path.join(
+  __dirname,
+  '..',
+  'simulator',
+  'event_schedule.json'
+);
 
 // ─── Load zone + event configs ───────────────────────────────────
 let zones = [];
@@ -48,7 +62,8 @@ let db = null;
 function initFirebase() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const dbUrl = process.env.FIREBASE_DATABASE_URL;
-  const credPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
+  const credPath =
+    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
     path.join(__dirname, '..', 'serviceAccountKey.json');
 
   if (!dbUrl) {
@@ -64,7 +79,9 @@ function initFirebase() {
     } else {
       // Try default credentials (for Cloud Run / app-default-credentials)
       credential = admin.credential.applicationDefault();
-      console.log('[WARN] No service account file — using application default credentials');
+      console.log(
+        '[WARN] No service account file — using application default credentials'
+      );
     }
 
     admin.initializeApp({
@@ -138,7 +155,7 @@ async function runPredictionCycle() {
 
   console.log(
     `\n── Prediction cycle #${cycleCount} ` +
-    `(t=${elapsedMinutes.toFixed(1)}min, ${context}) ──`
+      `(t=${elapsedMinutes.toFixed(1)}min, ${context}) ──`
   );
 
   for (let i = 0; i < zones.length; i++) {
@@ -195,7 +212,7 @@ async function runPredictionCycle() {
 
   console.log(
     `── Cycle #${cycleCount} complete. ` +
-    `Active alerts: ${getActiveAlertCount()} ──\n`
+      `Active alerts: ${getActiveAlertCount()} ──\n`
   );
 }
 
@@ -207,8 +224,12 @@ function sleep(ms) {
 async function main() {
   console.log('='.repeat(60));
   console.log('  NexGate Prediction Engine');
-  console.log(`  Zones: ${zones.length} | Stagger: ${ZONE_INTERVAL_MS / 1000}s per zone`);
-  console.log(`  Full cycle: ~${(zones.length * ZONE_INTERVAL_MS / 1000).toFixed(0)}s`);
+  console.log(
+    `  Zones: ${zones.length} | Stagger: ${ZONE_INTERVAL_MS / 1000}s per zone`
+  );
+  console.log(
+    `  Full cycle: ~${((zones.length * ZONE_INTERVAL_MS) / 1000).toFixed(0)}s`
+  );
   console.log('='.repeat(60));
 
   // Initialize Firebase
@@ -219,7 +240,9 @@ async function main() {
   if (geminiKey && geminiKey !== 'your_gemini_api_key_here') {
     initGemini(geminiKey);
   } else {
-    console.log('[WARN] GEMINI_API_KEY not set — running in fallback mode (moving average)');
+    console.log(
+      '[WARN] GEMINI_API_KEY not set — running in fallback mode (moving average)'
+    );
   }
 
   // Initialize alert manager

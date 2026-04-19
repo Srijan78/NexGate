@@ -33,14 +33,14 @@ let alertCount = 0;
 
 // ─── Zone config (matches simulator/zones_config.json) ────────
 const ZONES = [
-  { id: 'gate_north',  name: 'Gate North',          capacity: 3000, icon: '🚪' },
-  { id: 'gate_south',  name: 'Gate South',          capacity: 3000, icon: '🚪' },
-  { id: 'gate_east',   name: 'Gate East',           capacity: 2000, icon: '🚪' },
-  { id: 'gate_west',   name: 'Gate West',           capacity: 2000, icon: '🚪' },
-  { id: 'concourse_a', name: 'Concourse A',         capacity: 5000, icon: '🏟️' },
-  { id: 'concourse_b', name: 'Concourse B',         capacity: 5000, icon: '🏟️' },
-  { id: 'main_stand',  name: 'Main Stand Area',     capacity: 8000, icon: '🎯' },
-  { id: 'exit_south',  name: 'Exit Corridor South', capacity: 4000, icon: '🚶' },
+  { id: 'gate_north', name: 'Gate North', capacity: 3000, icon: '🚪' },
+  { id: 'gate_south', name: 'Gate South', capacity: 3000, icon: '🚪' },
+  { id: 'gate_east', name: 'Gate East', capacity: 2000, icon: '🚪' },
+  { id: 'gate_west', name: 'Gate West', capacity: 2000, icon: '🚪' },
+  { id: 'concourse_a', name: 'Concourse A', capacity: 5000, icon: '🏟️' },
+  { id: 'concourse_b', name: 'Concourse B', capacity: 5000, icon: '🏟️' },
+  { id: 'main_stand', name: 'Main Stand Area', capacity: 8000, icon: '🎯' },
+  { id: 'exit_south', name: 'Exit Corridor South', capacity: 4000, icon: '🚶' },
 ];
 
 const CONCESSION_STANDS = [
@@ -48,7 +48,7 @@ const CONCESSION_STANDS = [
   { id: 'stand_b', name: 'Stand B' },
   { id: 'stand_c', name: 'Stand C' },
   { id: 'stand_d', name: 'Stand D' },
-  { id: 'express',  name: 'Express Kiosk' },
+  { id: 'express', name: 'Express Kiosk' },
 ];
 
 // ─── Initialize ──────────────────────────────────────────────
@@ -82,12 +82,10 @@ async function initFirebase() {
   }
 
   try {
-    const { initializeApp } = await import(
-      'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js'
-    );
-    const { getDatabase } = await import(
-      'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'
-    );
+    const { initializeApp } =
+      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const { getDatabase } =
+      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
 
     firebaseApp = initializeApp(FIREBASE_CONFIG);
     db = getDatabase(firebaseApp);
@@ -103,7 +101,16 @@ async function initFirebase() {
 
 // ─── Firebase Listeners ───────────────────────────────────────
 async function startFirebaseListeners() {
-  const { ref, onValue, onChildAdded, onChildChanged, query, orderByChild, equalTo, update } =
+  const {
+    ref,
+    onValue,
+    onChildAdded,
+    onChildChanged,
+    query,
+    orderByChild,
+    equalTo,
+    update,
+  } =
     await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
 
   // Zone data listener
@@ -223,9 +230,16 @@ function updateZoneCard(zoneId, data) {
   // Update data attribute
   card.dataset.risk = risk;
 
-  // Update density
+  // Update density without full innerHTML repaint
   const densityEl = document.getElementById(`density-${zoneId}`);
-  densityEl.innerHTML = `${density}<span class="metric-unit">%</span>`;
+  if (
+    densityEl.firstChild &&
+    densityEl.firstChild.nodeType === Node.TEXT_NODE
+  ) {
+    densityEl.firstChild.nodeValue = density;
+  } else {
+    densityEl.innerHTML = `${density}<span class="metric-unit">%</span>`;
+  }
 
   // Update queue
   const queueEl = document.getElementById(`queue-${zoneId}`);
@@ -343,8 +357,7 @@ function addAlertCard(alert) {
   card.className = 'alert-card';
   card.id = `alert-${alert.id}`;
 
-  const severityIcon =
-    alert.severity === 'critical' ? '🔴' : '🟠';
+  const severityIcon = alert.severity === 'critical' ? '🔴' : '🟠';
   const iconClass =
     alert.severity === 'critical' ? 'severity-critical' : 'severity-high';
 
@@ -502,38 +515,56 @@ function pushMockData() {
   // Update event context
   const eventEl = document.getElementById('event-context');
   if (isHalftime) {
-    eventEl.querySelector('.event-text').textContent = '⚠ Halftime — Surge Active';
+    eventEl.querySelector('.event-text').textContent =
+      '⚠ Halftime — Surge Active';
   } else if (isFullTime) {
-    eventEl.querySelector('.event-text').textContent = '🏁 Full Time — Exit Flow';
+    eventEl.querySelector('.event-text').textContent =
+      '🏁 Full Time — Exit Flow';
   } else if (elapsedMin < 42) {
     const minsToHalf = 45 - elapsedMin;
     if (minsToHalf <= 10 && minsToHalf > 0) {
-      eventEl.querySelector('.event-text').textContent = `Halftime in ${minsToHalf} min`;
+      eventEl.querySelector('.event-text').textContent =
+        `Halftime in ${minsToHalf} min`;
     } else {
-      eventEl.querySelector('.event-text').textContent = `Match: ${elapsedMin}' — 1st Half`;
+      eventEl.querySelector('.event-text').textContent =
+        `Match: ${elapsedMin}' — 1st Half`;
     }
   } else {
-    eventEl.querySelector('.event-text').textContent = `Match: ${elapsedMin}' — 2nd Half`;
+    eventEl.querySelector('.event-text').textContent =
+      `Match: ${elapsedMin}' — 2nd Half`;
   }
 
   const now = new Date().toISOString();
 
   // Zone densities — each zone has different behavior
   const zoneDensities = {
-    gate_north:  clamp(35 + Math.sin(mockTick * 0.3) * 12 + (isHalftime ? 25 : 0) + rand(-5, 5)),
-    gate_south:  clamp(30 + Math.sin(mockTick * 0.25) * 10 + (isFullTime ? 40 : 0) + rand(-5, 5)),
-    gate_east:   clamp(25 + Math.sin(mockTick * 0.2) * 8 + rand(-5, 5)),
-    gate_west:   clamp(20 + Math.sin(mockTick * 0.22) * 8 + (isFullTime ? 30 : 0) + rand(-5, 5)),
-    concourse_a: clamp(40 + Math.sin(mockTick * 0.35) * 15 + (isHalftime ? 45 : 0) + rand(-5, 5)),
-    concourse_b: clamp(38 + Math.sin(mockTick * 0.28) * 14 + (isHalftime ? 42 : 0) + rand(-5, 5)),
-    main_stand:  clamp(55 + Math.sin(mockTick * 0.15) * 10 + rand(-3, 3)),
-    exit_south:  clamp(10 + Math.sin(mockTick * 0.18) * 8 + (isFullTime ? 55 : 0) + rand(-5, 5)),
+    gate_north: clamp(
+      35 + Math.sin(mockTick * 0.3) * 12 + (isHalftime ? 25 : 0) + rand(-5, 5)
+    ),
+    gate_south: clamp(
+      30 + Math.sin(mockTick * 0.25) * 10 + (isFullTime ? 40 : 0) + rand(-5, 5)
+    ),
+    gate_east: clamp(25 + Math.sin(mockTick * 0.2) * 8 + rand(-5, 5)),
+    gate_west: clamp(
+      20 + Math.sin(mockTick * 0.22) * 8 + (isFullTime ? 30 : 0) + rand(-5, 5)
+    ),
+    concourse_a: clamp(
+      40 + Math.sin(mockTick * 0.35) * 15 + (isHalftime ? 45 : 0) + rand(-5, 5)
+    ),
+    concourse_b: clamp(
+      38 + Math.sin(mockTick * 0.28) * 14 + (isHalftime ? 42 : 0) + rand(-5, 5)
+    ),
+    main_stand: clamp(55 + Math.sin(mockTick * 0.15) * 10 + rand(-3, 3)),
+    exit_south: clamp(
+      10 + Math.sin(mockTick * 0.18) * 8 + (isFullTime ? 55 : 0) + rand(-5, 5)
+    ),
   };
 
   for (const zone of ZONES) {
     const density = Math.round(zoneDensities[zone.id]);
     const risk = getRiskLevel(density);
-    const queueMult = density > 85 ? 0.2 : density > 70 ? 0.1 : density > 50 ? 0.04 : 0.015;
+    const queueMult =
+      density > 85 ? 0.2 : density > 70 ? 0.1 : density > 50 ? 0.04 : 0.015;
     const queue = Math.round(zone.capacity * queueMult + rand(-20, 20));
 
     updateZoneCard(zone.id, {
@@ -554,11 +585,26 @@ function pushMockData() {
 
   // Concession data
   const concessionData = {
-    stand_a: { load: clamp(30 + rand(-10, 20) + (isHalftime ? 45 : 0)), lanes: 4 },
-    stand_b: { load: clamp(25 + rand(-10, 15) + (isHalftime ? 50 : 0)), lanes: 3 },
-    stand_c: { load: clamp(35 + rand(-10, 18) + (isHalftime ? 40 : 0)), lanes: 4 },
-    stand_d: { load: clamp(20 + rand(-10, 12) + (isHalftime ? 35 : 0)), lanes: 3 },
-    express: { load: clamp(15 + rand(-5, 20) + (isHalftime ? 30 : 0)), lanes: 2 },
+    stand_a: {
+      load: clamp(30 + rand(-10, 20) + (isHalftime ? 45 : 0)),
+      lanes: 4,
+    },
+    stand_b: {
+      load: clamp(25 + rand(-10, 15) + (isHalftime ? 50 : 0)),
+      lanes: 3,
+    },
+    stand_c: {
+      load: clamp(35 + rand(-10, 18) + (isHalftime ? 40 : 0)),
+      lanes: 4,
+    },
+    stand_d: {
+      load: clamp(20 + rand(-10, 12) + (isHalftime ? 35 : 0)),
+      lanes: 3,
+    },
+    express: {
+      load: clamp(15 + rand(-5, 20) + (isHalftime ? 30 : 0)),
+      lanes: 2,
+    },
   };
 
   for (const stand of CONCESSION_STANDS) {
@@ -566,7 +612,7 @@ function pushMockData() {
     const lanesOpen = Math.max(1, Math.round(cd.lanes * (cd.load / 100)));
     updateConcessionBar(stand.id, {
       load_percent: Math.round(cd.load),
-      wait_minutes: Math.round(cd.load / 100 * 18 + rand(-2, 2)),
+      wait_minutes: Math.round((cd.load / 100) * 18 + rand(-2, 2)),
       lanes_open: Math.min(cd.lanes, lanesOpen + 1),
       predicted_surge: isHalftime || (elapsedMin > 35 && elapsedMin < 45),
     });
@@ -581,7 +627,8 @@ function addMockAlerts() {
       zone_name: 'Concourse A',
       type: 'crowd',
       severity: 'high',
-      message: 'Predicted density 82% in 10 minutes. Open additional concession lanes. Activate redirect signage at Gate 7.',
+      message:
+        'Predicted density 82% in 10 minutes. Open additional concession lanes. Activate redirect signage at Gate 7.',
       timestamp: new Date(Date.now() - 420000).toISOString(),
       resolved: false,
     },
@@ -591,7 +638,8 @@ function addMockAlerts() {
       zone_name: 'Gate North',
       type: 'crowd',
       severity: 'critical',
-      message: 'Critical congestion forecast. Divert incoming traffic to Gate East. Deploy 4 additional stewards.',
+      message:
+        'Critical congestion forecast. Divert incoming traffic to Gate East. Deploy 4 additional stewards.',
       timestamp: new Date(Date.now() - 180000).toISOString(),
       resolved: false,
     },
@@ -601,7 +649,8 @@ function addMockAlerts() {
       zone_name: 'Concourse B',
       type: 'concessions',
       severity: 'high',
-      message: 'Halftime surge imminent. Pre-emptively open all lanes at Stand B and Stand C.',
+      message:
+        'Halftime surge imminent. Pre-emptively open all lanes at Stand B and Stand C.',
       timestamp: new Date(Date.now() - 60000).toISOString(),
       resolved: false,
     },

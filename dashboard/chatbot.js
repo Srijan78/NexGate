@@ -19,42 +19,49 @@ const GEMINI_API_KEY_CHATBOT = 'YOUR_CHATBOT_GEMINI_KEY_HERE';
 
 // ─── Zone Configuration ─────────────────────────────────────────
 const CHAT_ZONES = [
-  { id: 'gate_north',  name: 'Gate North',          icon: '🚪' },
-  { id: 'gate_south',  name: 'Gate South',          icon: '🚪' },
-  { id: 'gate_east',   name: 'Gate East',           icon: '🚪' },
-  { id: 'gate_west',   name: 'Gate West',           icon: '🚪' },
-  { id: 'concourse_a', name: 'Concourse A',         icon: '🏟️' },
-  { id: 'concourse_b', name: 'Concourse B',         icon: '🏟️' },
-  { id: 'main_stand',  name: 'Main Stand',          icon: '🎯' },
-  { id: 'exit_south',  name: 'Exit Corridor South', icon: '🚶' },
+  { id: 'gate_north', name: 'Gate North', icon: '🚪' },
+  { id: 'gate_south', name: 'Gate South', icon: '🚪' },
+  { id: 'gate_east', name: 'Gate East', icon: '🚪' },
+  { id: 'gate_west', name: 'Gate West', icon: '🚪' },
+  { id: 'concourse_a', name: 'Concourse A', icon: '🏟️' },
+  { id: 'concourse_b', name: 'Concourse B', icon: '🏟️' },
+  { id: 'main_stand', name: 'Main Stand', icon: '🎯' },
+  { id: 'exit_south', name: 'Exit Corridor South', icon: '🚶' },
 ];
 
 // ─── Zone Neighbour Map (hardcoded adjacency) ───────────────────
 const ZONE_NEIGHBOURS = {
-  gate_north:  ['concourse_a', 'gate_east'],
-  gate_south:  ['concourse_b', 'gate_west'],
-  gate_east:   ['gate_north', 'concourse_a'],
-  gate_west:   ['gate_south', 'concourse_b'],
+  gate_north: ['concourse_a', 'gate_east'],
+  gate_south: ['concourse_b', 'gate_west'],
+  gate_east: ['gate_north', 'concourse_a'],
+  gate_west: ['gate_south', 'concourse_b'],
   concourse_a: ['gate_north', 'gate_east', 'main_stand'],
   concourse_b: ['gate_south', 'gate_west', 'main_stand'],
-  main_stand:  ['concourse_a', 'concourse_b'],
-  exit_south:  ['gate_south', 'gate_west'],
+  main_stand: ['concourse_a', 'concourse_b'],
+  exit_south: ['gate_south', 'gate_west'],
 };
 
 // ─── Emergency Keywords ─────────────────────────────────────────
 const EMERGENCY_KEYWORDS = [
-  'medical', 'emergency', 'help', 'ambulance', 'injured',
-  'hurt', 'accident', 'unconscious', 'attack',
+  'medical',
+  'emergency',
+  'help',
+  'ambulance',
+  'injured',
+  'hurt',
+  'accident',
+  'unconscious',
+  'attack',
 ];
 
 // ─── State ──────────────────────────────────────────────────────
 let selectedZoneId = null;
 let selectedZoneName = '';
-let conversationHistory = [];   // { role: 'user'|'model', parts: [{ text }] }
-let currentZoneData = null;     // live density/queue/risk from Firebase
-let neighbourData = {};         // { zoneId: { density, queue, name } }
-let zoneListener = null;        // Firebase onValue unsubscribe
-let neighbourListeners = [];    // Firebase onValue unsubscribes
+let conversationHistory = []; // { role: 'user'|'model', parts: [{ text }] }
+let currentZoneData = null; // live density/queue/risk from Firebase
+let neighbourData = {}; // { zoneId: { density, queue, name } }
+let zoneListener = null; // Firebase onValue unsubscribe
+let neighbourListeners = []; // Firebase onValue unsubscribes
 let isWaitingForGemini = false;
 let chatbotPanelOpen = false;
 
@@ -71,15 +78,16 @@ async function initChatbot() {
 
   // Load Firebase SDK functions for chatbot use
   try {
-    const dbMod = await import(
-      'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js'
-    );
+    const dbMod =
+      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js');
     fbRef = dbMod.ref;
     fbOnValue = dbMod.onValue;
     fbPush = dbMod.push;
     fbSet = dbMod.set;
   } catch (err) {
-    console.log('[Chatbot] Firebase SDK not available — will work without live data');
+    console.log(
+      '[Chatbot] Firebase SDK not available — will work without live data'
+    );
   }
 }
 
@@ -144,17 +152,19 @@ function renderZoneSelector() {
   selector.innerHTML = `
     <p class="chatbot-selector-label">Select your current zone:</p>
     <div class="chatbot-zone-grid">
-      ${CHAT_ZONES.map(z => `
+      ${CHAT_ZONES.map(
+        (z) => `
         <button class="chatbot-zone-btn" data-zone-id="${z.id}">
           <span class="chatbot-zone-btn-icon">${z.icon}</span>
           <span class="chatbot-zone-btn-name">${z.name}</span>
         </button>
-      `).join('')}
+      `
+      ).join('')}
     </div>
   `;
 
   // Attach click handlers
-  selector.querySelectorAll('.chatbot-zone-btn').forEach(btn => {
+  selector.querySelectorAll('.chatbot-zone-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const zoneId = btn.dataset.zoneId;
       selectZone(zoneId);
@@ -164,7 +174,7 @@ function renderZoneSelector() {
 
 // ─── Select Zone ────────────────────────────────────────────────
 function selectZone(zoneId) {
-  const zone = CHAT_ZONES.find(z => z.id === zoneId);
+  const zone = CHAT_ZONES.find((z) => z.id === zoneId);
   if (!zone) return;
 
   selectedZoneId = zoneId;
@@ -184,7 +194,9 @@ function selectZone(zoneId) {
   msgContainer.innerHTML = '';
 
   // Add welcome message
-  addBotMessage(`Welcome to **${zone.name}**! 👋\n\nI can help you with:\n• Crowd levels & wait times\n• Finding shorter queues nearby\n• Food & concession info\n• Directions & wayfinding\n\nWhat would you like to know?`);
+  addBotMessage(
+    `Welcome to **${zone.name}**! 👋\n\nI can help you with:\n• Crowd levels & wait times\n• Finding shorter queues nearby\n• Food & concession info\n• Directions & wayfinding\n\nWhat would you like to know?`
+  );
 
   // Start live data listeners
   startZoneListener(zoneId);
@@ -198,7 +210,7 @@ function resetToZoneSelector() {
     zoneListener();
     zoneListener = null;
   }
-  neighbourListeners.forEach(unsub => unsub());
+  neighbourListeners.forEach((unsub) => unsub());
   neighbourListeners = [];
 
   // Reset state
@@ -228,7 +240,9 @@ function startZoneListener(zoneId) {
   if (!db || !fbRef || !fbOnValue) {
     // Mock mode — use static data
     currentZoneData = {
-      density: 42, queue_length: 85, risk: 'low',
+      density: 42,
+      queue_length: 85,
+      risk: 'low',
       action: 'Operating within normal parameters.',
       wait_minutes: 3.2,
     };
@@ -296,8 +310,8 @@ function startNeighbourListeners(zoneId) {
 
   if (!db || !fbRef || !fbOnValue) {
     // Mock mode — populate with dummy data
-    neighbours.forEach(nId => {
-      const zone = CHAT_ZONES.find(z => z.id === nId);
+    neighbours.forEach((nId) => {
+      const zone = CHAT_ZONES.find((z) => z.id === nId);
       neighbourData[nId] = {
         name: zone ? zone.name : nId,
         density: Math.round(20 + Math.random() * 50),
@@ -307,9 +321,9 @@ function startNeighbourListeners(zoneId) {
     return;
   }
 
-  neighbours.forEach(nId => {
+  neighbours.forEach((nId) => {
     const nRef = fbRef(db, `zones/${nId}/current`);
-    const zone = CHAT_ZONES.find(z => z.id === nId);
+    const zone = CHAT_ZONES.find((z) => z.id === nId);
 
     const unsub = fbOnValue(nRef, (snap) => {
       const data = snap.val();
@@ -377,14 +391,14 @@ async function handleSendMessage() {
 // ─── Emergency Detection & Handling ─────────────────────────────
 function checkEmergency(text) {
   const lower = text.toLowerCase();
-  return EMERGENCY_KEYWORDS.some(keyword => lower.includes(keyword));
+  return EMERGENCY_KEYWORDS.some((keyword) => lower.includes(keyword));
 }
 
 async function handleEmergency(userText) {
   // 1. Immediately show red emergency card
   addEmergencyMessage(
     '🚨 **Emergency detected.** Your alert has been sent to venue operations immediately.\n\n' +
-    'Stay calm. Help is being dispatched to your zone.'
+      'Stay calm. Help is being dispatched to your zone.'
   );
 
   // 2. Write alert to Firebase
@@ -397,7 +411,9 @@ async function handleEmergency(userText) {
 async function writeEmergencyAlert() {
   const db = window._firebaseDb;
   if (!db || !fbRef || !fbPush || !fbSet) {
-    console.log('[Chatbot] Emergency alert — Firebase unavailable, logged locally');
+    console.log(
+      '[Chatbot] Emergency alert — Firebase unavailable, logged locally'
+    );
     return;
   }
 
@@ -421,10 +437,13 @@ async function writeEmergencyAlert() {
 
 // ─── Gemini API Call ────────────────────────────────────────────
 async function callGemini(userText, isFollowUp = false) {
-  if (!GEMINI_API_KEY_CHATBOT || GEMINI_API_KEY_CHATBOT === 'YOUR_CHATBOT_GEMINI_KEY_HERE') {
+  if (
+    !GEMINI_API_KEY_CHATBOT ||
+    GEMINI_API_KEY_CHATBOT === 'YOUR_CHATBOT_GEMINI_KEY_HERE'
+  ) {
     addBotMessage(
       "I'm currently offline — my API key hasn't been configured yet. " +
-      "Please ask venue staff for assistance."
+        'Please ask venue staff for assistance.'
     );
     return;
   }
@@ -457,7 +476,11 @@ async function callGemini(userText, isFollowUp = false) {
         },
         {
           role: 'model',
-          parts: [{ text: 'Understood. I have the live venue data. How can I help you?' }],
+          parts: [
+            {
+              text: 'Understood. I have the live venue data. How can I help you?',
+            },
+          ],
         },
         // Conversation history
         ...conversationHistory,
@@ -494,13 +517,12 @@ async function callGemini(userText, isFollowUp = false) {
 
     hideTypingIndicator();
     addBotMessage(botText);
-
   } catch (err) {
     console.error('[Chatbot] Gemini call failed:', err);
     hideTypingIndicator();
     addBotMessage(
       "Sorry, I'm having trouble connecting right now. " +
-      "Please ask a nearby steward for help."
+        'Please ask a nearby steward for help.'
     );
   } finally {
     isWaitingForGemini = false;
@@ -510,7 +532,11 @@ async function callGemini(userText, isFollowUp = false) {
 // ─── Build Gemini Context ───────────────────────────────────────
 function buildGeminiContext() {
   const zd = currentZoneData || {
-    density: 0, queue_length: 0, wait_minutes: 0, risk: 'low', action: '',
+    density: 0,
+    queue_length: 0,
+    wait_minutes: 0,
+    risk: 'low',
+    action: '',
   };
 
   // Filter neighbours: density < 80%, sort ascending, max 2
@@ -522,10 +548,14 @@ function buildGeminiContext() {
   let neighbourSection = '';
   if (filteredNeighbours.length > 0) {
     neighbourSection = filteredNeighbours
-      .map(([_, nd]) => `- ${nd.name}: ${Math.round(nd.density)}% full, ${nd.wait_minutes} min wait`)
+      .map(
+        ([_, nd]) =>
+          `- ${nd.name}: ${Math.round(nd.density)}% full, ${nd.wait_minutes} min wait`
+      )
       .join('\n');
   } else {
-    neighbourSection = '- ALL nearby zones are above 80% capacity (stadium-wide surge)';
+    neighbourSection =
+      '- ALL nearby zones are above 80% capacity (stadium-wide surge)';
   }
 
   return `You are NexGate's venue assistant helping an attendee inside a 60,000 seat stadium.

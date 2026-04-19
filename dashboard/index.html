@@ -1,153 +1,287 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="NexGate — Real-time crowd intelligence dashboard for venue operations. Monitor zone density, alerts, and concession loads.">
-  <title>NexGate — Ops Dashboard</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="NexGate — Real-time crowd intelligence dashboard for venue operations. Monitor zone density, alerts, and concession loads."
+    />
+    <title>NexGate — Ops Dashboard</title>
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <!-- ═══ Header ═══ -->
-  <header id="main-header" class="header">
-    <div class="header-left">
-      <div class="logo">
-        <svg class="logo-icon" width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <rect width="32" height="32" rx="8" fill="url(#logo-grad)"/>
-          <path d="M8 16L14 10L20 16L14 22Z" fill="white" opacity="0.9"/>
-          <path d="M14 16L20 10L26 16L20 22Z" fill="white" opacity="0.5"/>
-          <defs>
-            <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32">
-              <stop stop-color="#333333"/>
-              <stop offset="1" stop-color="#1a1a1a"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <h1>NexGate</h1>
-      </div>
-      <span class="header-tagline">Ops Command Center</span>
-    </div>
-    <div class="header-center">
-      <div id="connection-status" class="status-badge status-offline">
-        <span class="status-dot"></span>
-        <span class="status-text">Connecting...</span>
-      </div>
-      <div id="event-context" class="event-badge">
-        <span class="event-icon">⚡</span>
-        <span class="event-text">Initializing...</span>
-      </div>
-    </div>
-    <div class="header-right">
-      <div id="clock" class="header-clock"></div>
-      <div id="stats-summary" class="header-stats">
-        <div class="stat-chip">
-          <span class="stat-label">Zones</span>
-          <span id="stat-zones" class="stat-value">8</span>
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- ═══ Header ═══ -->
+    <header id="main-header" class="header">
+      <div class="header-left">
+        <div class="logo">
+          <svg
+            class="logo-icon"
+            width="32"
+            height="32"
+            viewBox="0 0 32 32"
+            fill="none"
+          >
+            <rect width="32" height="32" rx="8" fill="url(#logo-grad)" />
+            <path d="M8 16L14 10L20 16L14 22Z" fill="white" opacity="0.9" />
+            <path d="M14 16L20 10L26 16L20 22Z" fill="white" opacity="0.5" />
+            <defs>
+              <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32">
+                <stop stop-color="#333333" />
+                <stop offset="1" stop-color="#1a1a1a" />
+              </linearGradient>
+            </defs>
+          </svg>
+          <h1>NexGate</h1>
         </div>
-        <div class="stat-chip stat-alerts">
-          <span class="stat-label">Alerts</span>
-          <span id="stat-alerts" class="stat-value">0</span>
-        </div>
+        <span class="header-tagline">Ops Command Center</span>
       </div>
-    </div>
-  </header>
-
-  <!-- ═══ Main Content ═══ -->
-  <main id="main-content" class="main">
-    <!-- Zone Grid -->
-    <section id="zone-section" class="section">
-      <div class="section-header">
-        <h2>Zone Monitor</h2>
-        <div class="section-actions">
-          <span id="zone-timestamp" class="timestamp-badge">Last update: —</span>
+      <div class="header-center">
+        <div
+          id="connection-status"
+          class="status-badge status-offline"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting...</span>
+        </div>
+        <div id="event-context" class="event-badge" role="status">
+          <span class="event-icon" aria-hidden="true">⚡</span>
+          <span class="event-text">Initializing...</span>
         </div>
       </div>
-      <div id="zone-grid" class="zone-grid">
-        <!-- Zone cards injected by app.js -->
-      </div>
-    </section>
-
-    <!-- Bottom Panels -->
-    <div class="bottom-panels">
-      <!-- Venue Map Panel -->
-      <section id="map-section" class="section panel-map">
-        <div class="section-header">
-          <h2>
-            <span class="section-icon">🗺️</span>
-            Live Venue Map
-          </h2>
-        </div>
-        <div class="venue-map-container" style="display: flex; justify-content: center; align-items: center; padding: 10px;">
-          <img src="assets/venue_map.svg" alt="Venue Map" style="max-width: 100%; height: auto; border-radius: var(--radius-md);">
-        </div>
-      </section>
-
-      <!-- Alert Feed -->
-      <section id="alert-section" class="section panel-alerts">
-        <div class="section-header">
-          <h2>
-            <span class="section-icon">🔔</span>
-            Active Alerts
-          </h2>
-          <span id="alert-count-badge" class="count-badge">0</span>
-        </div>
-        <div id="alert-feed" class="alert-feed">
-          <div class="empty-state">
-            <span class="empty-icon">✅</span>
-            <p>All clear — no active alerts</p>
+      <div class="header-right">
+        <div id="clock" class="header-clock" aria-label="Current Time"></div>
+        <div id="stats-summary" class="header-stats" aria-label="Quick Stats">
+          <div class="stat-chip">
+            <span class="stat-label">Zones</span>
+            <span id="stat-zones" class="stat-value">8</span>
+          </div>
+          <div class="stat-chip stat-alerts">
+            <span class="stat-label">Alerts</span>
+            <span id="stat-alerts" class="stat-value">0</span>
           </div>
         </div>
-      </section>
+      </div>
+    </header>
 
-      <!-- Concession Panel -->
-      <section id="concession-section" class="section panel-concessions">
+    <!-- ═══ Main Content ═══ -->
+    <main id="main-content" class="main">
+      <!-- Zone Grid -->
+      <section
+        id="zone-section"
+        class="section"
+        aria-labelledby="zone-monitor-heading"
+      >
         <div class="section-header">
-          <h2>
-            <span class="section-icon">🍔</span>
-            Concession Loads
-          </h2>
+          <h2 id="zone-monitor-heading">Zone Monitor</h2>
+          <div class="section-actions">
+            <span id="zone-timestamp" class="timestamp-badge" aria-live="polite"
+              >Last update: —</span
+            >
+          </div>
         </div>
-        <div id="concession-bars" class="concession-bars">
-          <!-- Concession bars injected by app.js -->
+        <div
+          id="zone-grid"
+          class="zone-grid"
+          role="region"
+          aria-label="Live Zone Data"
+        >
+          <!-- Zone cards injected by app.js -->
         </div>
       </section>
-    </div>
-  </main>
 
-  <!-- ═══ Chatbot Panel ═══ -->
-  <div id="chatbot-panel" class="chatbot-panel">
-    <div class="chatbot-header">
-      <h3 class="chatbot-title">💬 NexGate Assistant</h3>
-      <div class="chatbot-header-actions">
-        <button id="chatbot-change-zone" class="chatbot-change-zone-btn" style="display:none">📍 Change Zone</button>
-        <button id="chatbot-toggle" class="chatbot-toggle-btn">✕</button>
+      <!-- Bottom Panels -->
+      <div class="bottom-panels">
+        <!-- Venue Map Panel -->
+        <section
+          id="map-section"
+          class="section panel-map"
+          aria-labelledby="map-heading"
+        >
+          <div class="section-header">
+            <h2 id="map-heading">
+              <span class="section-icon" aria-hidden="true">🗺️</span>
+              Live Venue Map
+            </h2>
+          </div>
+          <div
+            class="venue-map-container"
+            style="
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              padding: 10px;
+            "
+          >
+            <img
+              src="assets/venue_map.svg"
+              alt="Venue Map showing connections between gates, concourses, and pitch"
+              style="
+                max-width: 100%;
+                height: auto;
+                border-radius: var(--radius-md);
+              "
+            />
+          </div>
+        </section>
+
+        <!-- Alert Feed -->
+        <section
+          id="alert-section"
+          class="section panel-alerts"
+          aria-labelledby="alerts-heading"
+        >
+          <div class="section-header">
+            <h2 id="alerts-heading">
+              <span class="section-icon" aria-hidden="true">🔔</span>
+              Active Alerts
+            </h2>
+            <span
+              id="alert-count-badge"
+              class="count-badge"
+              aria-label="Number of explicit alerts"
+              >0</span
+            >
+          </div>
+          <div
+            id="alert-feed"
+            class="alert-feed"
+            aria-live="polite"
+            aria-atomic="false"
+          >
+            <div class="empty-state">
+              <span class="empty-icon" aria-hidden="true">✅</span>
+              <p>All clear — no active alerts</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Concession Panel -->
+        <section
+          id="concession-section"
+          class="section panel-concessions"
+          aria-labelledby="concessions-heading"
+        >
+          <div class="section-header">
+            <h2 id="concessions-heading">
+              <span class="section-icon" aria-hidden="true">🍔</span>
+              Concession Loads
+            </h2>
+          </div>
+          <div
+            id="concession-bars"
+            class="concession-bars"
+            role="region"
+            aria-label="Live Concession Lines"
+          >
+            <!-- Concession bars injected by app.js -->
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ═══ Chatbot Panel ═══ -->
+    <div
+      id="chatbot-panel"
+      class="chatbot-panel"
+      role="dialog"
+      aria-labelledby="chatbot-title"
+      aria-modal="false"
+    >
+      <div class="chatbot-header">
+        <h3 id="chatbot-title" class="chatbot-title">💬 NexGate Assistant</h3>
+        <div class="chatbot-header-actions">
+          <button
+            id="chatbot-change-zone"
+            class="chatbot-change-zone-btn"
+            style="display: none"
+            aria-label="Change contextual zone"
+          >
+            📍 Change Zone
+          </button>
+          <button
+            id="chatbot-toggle"
+            class="chatbot-toggle-btn"
+            aria-label="Close Assistant"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <div
+        id="chatbot-zone-status"
+        class="chatbot-zone-status"
+        style="display: none"
+        aria-live="polite"
+      >
+        <!-- Live zone info card injected by chatbot.js -->
+      </div>
+      <div
+        id="chatbot-zone-selector"
+        class="chatbot-zone-selector"
+        aria-label="Select a zone"
+      >
+        <!-- 8 zone buttons injected by chatbot.js -->
+      </div>
+      <div
+        id="chatbot-messages"
+        class="chatbot-messages"
+        style="display: none"
+        aria-live="polite"
+        aria-relevant="additions"
+      >
+        <!-- Chat messages injected by chatbot.js -->
+      </div>
+      <div
+        id="chatbot-input-area"
+        class="chatbot-input-area"
+        style="display: none"
+      >
+        <label
+          for="chatbot-input"
+          class="sr-only"
+          aria-hidden="true"
+          style="display: none"
+          >Type your message</label
+        >
+        <input
+          id="chatbot-input"
+          type="text"
+          placeholder="Ask about crowds, food, directions..."
+          autocomplete="off"
+          aria-label="Message NexGate Assistant"
+        />
+        <button
+          id="chatbot-send"
+          class="chatbot-send-btn"
+          aria-label="Send Message"
+        >
+          ➤
+        </button>
       </div>
     </div>
-    <div id="chatbot-zone-status" class="chatbot-zone-status" style="display:none">
-      <!-- Live zone info card injected by chatbot.js -->
-    </div>
-    <div id="chatbot-zone-selector" class="chatbot-zone-selector">
-      <!-- 8 zone buttons injected by chatbot.js -->
-    </div>
-    <div id="chatbot-messages" class="chatbot-messages" style="display:none">
-      <!-- Chat messages injected by chatbot.js -->
-    </div>
-    <div id="chatbot-input-area" class="chatbot-input-area" style="display:none">
-      <input id="chatbot-input" type="text" placeholder="Ask about crowds, food, directions..." autocomplete="off" />
-      <button id="chatbot-send" class="chatbot-send-btn">➤</button>
-    </div>
-  </div>
-  <button id="chatbot-fab" class="chatbot-fab">💬</button>
+    <button
+      id="chatbot-fab"
+      class="chatbot-fab"
+      aria-label="Open NexGate Assistant"
+    >
+      💬
+    </button>
 
-  <!-- ═══ Firebase SDK (CDN) ═══ -->
-  <script type="module" src="app.js"></script>
-  <script type="module" src="chatbot.js"></script>
-</body>
+    <!-- ═══ Firebase SDK (CDN) ═══ -->
+    <script type="module" src="app.js"></script>
+    <script type="module" src="chatbot.js"></script>
+  </body>
 </html>
