@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/hero_banner.png" alt="NexGate Hero Banner" max-width="100%">
+  <img src="assets/hero_banner.png" alt="NexGate Hero Banner" max-width="100%">
   <br/>
   <h1>NexGate</h1>
   <p><strong>AI-Powered Crowd Logistics for the Modern Stadium</strong></p>
