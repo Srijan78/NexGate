@@ -1,0 +1,28 @@
+{
+  "events": [
+    {
+      "time_offset_min": 0,
+      "label": "Kickoff",
+      "surge_zones": ["gate_north", "gate_south"],
+      "surge_multiplier": 2.2
+    },
+    {
+      "time_offset_min": 45,
+      "label": "Halftime",
+      "surge_zones": ["concourse_a", "concourse_b"],
+      "surge_multiplier": 2.8
+    },
+    {
+      "time_offset_min": 50,
+      "label": "Halftime peak",
+      "surge_zones": ["concourse_a", "concourse_b", "gate_north"],
+      "surge_multiplier": 3.1
+    },
+    {
+      "time_offset_min": 90,
+      "label": "Full time",
+      "surge_zones": ["exit_south", "gate_south", "gate_west"],
+      "surge_multiplier": 2.5
+    }
+  ]
+}

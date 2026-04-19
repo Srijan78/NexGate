@@ -1,0 +1,15 @@
+{
+  "name": "nexgate-engine",
+  "version": "1.0.0",
+  "description": "NexGate Gemini prediction engine — reads Firebase sensor data, calls Gemini 1.5 Flash, writes forecasts + alerts",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.15.0",
+    "firebase-admin": "^12.0.0",
+    "dotenv": "^16.0.0"
+  }
+}
