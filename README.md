@@ -1,32 +1,29 @@
 <div align="center">
-  <img src="assets/hero_banner.png" alt="NexGate Hero Banner" max-width="100%">
-  <br/>
   <h1>NexGate</h1>
-  <p><strong>AI-Powered Crowd Logistics for the Modern Stadium</strong></p>
+  <p><strong>AI-Powered Stadium Crowd Analytics & Logistics Monitoring</strong></p>
   
   <p>
     <img src="https://img.shields.io/badge/Google-Gemini_3_Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" />
     <img src="https://img.shields.io/badge/Firebase-Realtime_DB-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
     <img src="https://img.shields.io/badge/Node.js-Prediction_Engine-339933?style=for-the-badge&logo=node.js&logoColor=white" />
-    <img src="https://img.shields.io/badge/Vanilla-JS_Frontend-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
+    <img src="https://img.shields.io/badge/Python-Simulator-3776AB?style=for-the-badge&logo=python&logoColor=white" />
   </p>
 </div>
 
-## 📌 Overview
-NexGate is a real-time, AI-driven stadium operations management system. By analyzing live density and queue metrics across various venue zones, NexGate performs proactive predictive modeling to alert venue staff to potential critical surges *before* they occur.
+## 📌 Project Overview
+NexGate is a comprehensive stadium operations platform designed to enhance attendee safety and optimize venue logistics. By integrating live sensor data with advanced AI forecasting, NexGate allows event staff to identify crowd surges and congestion points before they reach critical levels.
 
-## ✨ High-Score Judging Features
-This project was strictly engineered to meet and exceed production-grade evaluation criteria:
+## 🚀 Key Capabilities
 
-* **☁️ Cloud & Cost Efficiency (Smart Heartbeat):** Protects API free tiers (1,500 daily requests) via reactive sleep states. The AI engine hibernates completely when idle but instantly achieves `Sub-5 Second Wake` upon a user connecting.
-* **🛡️ Security:** Strict `database.rules.json` implementation ensures the live Firebase instance only accepts data writes from authorized backend service accounts, thwarting public data injection.
-* **🧪 Test-Driven Reliability:** Features automated Jest unit suites (`npm test`) that test the mathematical moving-average fallbacks, ensuring 100% operational uptime even if external APIs crash.
-* **♿ Accessibility (A11y):** ARIA-compliant DOM featuring `aria-live="polite"` injection feeds to support screen readers for visually impaired venue managers.
-* **💎 Code Quality:** 100% uniform formatting enforced by `.prettierrc` configuration and clean ES6 module architectures.
+*   **⚡ Predictive Risk Analysis:** Utilizes Gemini 3 Flash to analyze real-time density trends and provide 10-minute risk forecasts for every zone in the stadium.
+*   **🔄 Real-time Operations Sync:** Powered by Firebase Realtime Database, providing sub-second synchronization between backend sensors and situational awareness dashboards.
+*   **🔋 Efficient Resource Management:** Implements an "Active Heartbeat" protocol to dynamically scale backend intensity based on user engagement, optimizing cloud resource consumption.
+*   **🍔 Concession Load Balancing:** Real-time monitoring of food and beverage wait times to redirect traffic and minimize attendee queues.
+*   **♿ Accessible Operations Dashboard:** Built with inclusive design principles, featuring high-contrast skeuomorphic UI and full screen-reader support via semantic ARIA implementation.
 
 ## 🧠 System Architecture
 
-The NexGate ecosystem operates natively on a reactive websocket message-bus architecture via Firebase, ensuring total decoupling between simulated sensors and the Predictive AI Engine.
+NexGate uses a reactive message-bus architecture to decouple physical sensors from the AI reasoning engine.
 
 ```mermaid
 graph TD
@@ -36,59 +33,59 @@ graph TD
     classDef google fill:#222,stroke:#4285F4,stroke-width:2px,color:#fff
     classDef data fill:#222,stroke:#EA4335,stroke-width:2px,color:#fff
 
-    subgraph "Backend / Cloud Run"
-        Sim["🐍 Simulator<br>(Raw Sensors)"]:::python
+    subgraph "Sensing & Logic"
+        Sim["🐍 Sensor Simulator<br>(Python)"]:::python
         Engine["🟢 Prediction Engine<br>(Node.js)"]:::node
     end
     
-    subgraph "Client App"
-        Dash["💻 Ops Dashboard<br>(Vanilla JS)"]:::frontend
-        Chat["💬 AI Operations Assistant"]:::frontend
+    subgraph "User Interface"
+        Dash["💻 Ops Command Center<br>(Vanilla JS/CSS)"]:::frontend
+        Chat["💬 AI Ops Assistant"]:::frontend
     end
 
-    subgraph "Google Cloud Platform"
-        DB[("🔥 Firebase RTDB<br>(Message Bus)")]:::data
-        Gemini["✨ Gemini 3 Flash<br>(AI Analytics)"]:::google
+    subgraph "Infrastructure"
+        DB[("🔥 Firebase RTDB<br>(Central Sync)")]:::data
+        Gemini["✨ Gemini 3 Flash<br>(Heuristic AI)"]:::google
     end
 
-    Sim -- "1. Emits Live Metrics" --> DB
+    Sim -- "1. Broadcasts Sensor Data" --> DB
     
-    DB -- "2. Streams Raw Data" --> Engine
-    Engine -- "3. Requests Forecast" --> Gemini
-    Gemini -- "4. Returns 10m Risk" --> Engine
-    Engine -- "5. Writes Predictions" --> DB
+    DB -- "2. Syncs Metrics" --> Engine
+    Engine -- "3. Requests Analysis" --> Gemini
+    Gemini -- "4. Returns 10m Forecast" --> Engine
+    Engine -- "5. Writes Updates" --> DB
     
-    DB -- "6. Sub-10ms UI Updates" --> Dash
-    DB -. "Shares Live Context" .-> Chat
+    DB -- "6. Real-time UI Update" --> Dash
+    DB -. "Contextual Knowledge" .-> Chat
     
-    Chat -- "7. NLP Prompt + Zone Context" --> Gemini
-    Gemini -- "8. Mitigation Advice" --> Chat
+    Chat -- "7. NLP Query" --> Gemini
+    Gemini -- "8. Response" --> Chat
 ```
 
-## 🚀 Quick Start Guide
+## 🛠️ Quick Start
 
-**1. Environment Variables**
-Rename `.env.example` to `.env` and plug in your exact Firebase and Google AI Studio credentials. Place your `serviceAccountKey.json` from Firebase in the root folder.
+**1. Configuration**
+Add your Firebase Project ID, Database URL, and Gemini API Key to a `.env` file in the root directory.
 
-**2. Start the Sensor Simulator (Python)**
-Generates mathematical mock data mimicking turnstiles and cameras.
+**2. Simulation**
+Initialize the sensor network simulator:
 ```bash
 cd simulator
 python simulator.py
 ```
 
-**3. Boot the Prediction Engine (Node.js)**
-Analyzes data streams using Gemini 3 and writes predictive alerts.
+**3. AI Analysis**
+Boot the prediction engine:
 ```bash
 cd engine
 npm install
 npm start
 ```
 
-**4. Launch the Operations Dashboard (Frontend)**
-No build steps required. Simply serve the static files:
+**4. Dashboard**
+Serve the web interface to view the live stadium matrix:
 ```bash
 cd dashboard
 npx serve . -l 3456
 ```
-Access `http://localhost:3456` to view the live venue matrix.
+Open `http://localhost:3456` in your browser.
