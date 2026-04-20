@@ -48,7 +48,10 @@ async function init() {
   renderZoneCards();
   renderConcessionBars();
 
-  const firebaseReady = await initFirebase();
+  const urlParams = new URLSearchParams(window.location.search);
+  const forceDiagnostic = urlParams.get('mode') === 'diagnostic';
+
+  const firebaseReady = !forceDiagnostic && (await initFirebase());
 
   if (firebaseReady) {
     setConnectionStatus('online', 'Live');
