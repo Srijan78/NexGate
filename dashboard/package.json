@@ -2,7 +2,9 @@
   "name": "nexgate-dashboard",
   "version": "1.0.0",
   "description": "NexGate Dashboard Static Server",
+  "type": "module",
   "scripts": {
+    "prestart": "node generate-config.js",
     "start": "npx -y serve -s . -l tcp://0.0.0.0:$PORT"
   }
 }
