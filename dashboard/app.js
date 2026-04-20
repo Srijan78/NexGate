@@ -11,8 +11,8 @@
 // ═══════════════════════════════════════════════════════════════
 // ═══ FIREBASE CONFIG (loaded from config.js, git-ignored) ═══
 // To regenerate: node setup-config.js
-// ═══════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = window.NEXGATE_CONFIG?.FIREBASE || {};
+// Read lazily inside initFirebase() to avoid race condition with
+// config.js loading asynchronously on Cloud Run.
 // ═══════════════════════════════════════════════════════════════
 
 // ─── State ───────────────────────────────────────────────────
@@ -66,6 +66,10 @@ async function init() {
 
 // ─── Firebase Init ────────────────────────────────────────────
 async function initFirebase() {
+  // Read config lazily at runtime (not at parse time) to avoid race
+  // condition where config.js hasn't loaded yet when app.js first runs.
+  const FIREBASE_CONFIG = window.NEXGATE_CONFIG?.FIREBASE || {};
+
   // Check if config has real values
   if (
     !FIREBASE_CONFIG.apiKey ||
