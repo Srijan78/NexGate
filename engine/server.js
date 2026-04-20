@@ -3,7 +3,25 @@ import cors from 'cors';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const app = express();
-app.use(cors());
+
+// ─── CORS: Allow localhost in dev, restrict to dashboard host in production ──
+// On Cloud Run, set ALLOWED_ORIGIN env var to your deployed dashboard URL.
+// e.g. ALLOWED_ORIGIN=https://nexgate-dashboard-xxxx-ew.a.run.app
+const allowedOrigins = process.env.ALLOWED_ORIGIN
+  ? [process.env.ALLOWED_ORIGIN]
+  : ['http://localhost:3456', 'http://127.0.0.1:3456'];
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Allow requests with no origin (e.g. curl, server-to-server, same-origin on Cloud Run)
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      cb(new Error(`CORS: Origin '${origin}' is not allowed`));
+    },
+    methods: ['POST'],
+  })
+);
+
 app.use(express.json());
 
 let model = null;

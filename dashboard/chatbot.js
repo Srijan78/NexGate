@@ -13,7 +13,11 @@
 // ═══ Chatbot proxies all AI calls to the secure backend.      ═══
 // ═══ API key is never exposed in the browser.                 ═══
 // ═══════════════════════════════════════════════════════════════
-const CHAT_PROXY_URL = 'http://localhost:3001/api/chat';
+// Works on local dev (port 3001) and Cloud Run (same-origin proxy).
+const CHAT_PROXY_URL =
+  window.location.hostname === 'localhost'
+    ? 'http://localhost:3001/api/chat'
+    : '/api/chat';
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Zone Configuration ─────────────────────────────────────────
@@ -329,7 +333,7 @@ async function callGemini(userText, isFollowUp = false) {
     // Retry loop for transient 503 High Demand errors on 3.1 Preview
     while (retries > 0) {
       response = await fetch(
-        `http://localhost:3001/api/chat`,
+        CHAT_PROXY_URL,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
