@@ -15,9 +15,10 @@
 // ═══════════════════════════════════════════════════════════════
 // Works on local dev (port 3001) and Cloud Run (same-origin proxy).
 const CHAT_PROXY_URL =
-  window.location.hostname === 'localhost'
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1'
     ? 'http://localhost:3001/api/chat'
-    : '/api/chat';
+    : 'https://nexgate-956136466810.europe-west1.run.app/api/chat';
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Zone Configuration ─────────────────────────────────────────
