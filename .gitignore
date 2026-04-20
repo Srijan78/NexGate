@@ -10,8 +10,6 @@ venv/
 
 # Secrets — NEVER commit these
 .env
-.env.example
-serviceAccountKey.json
 dashboard/config.js
 *.key
 

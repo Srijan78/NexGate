@@ -27,6 +27,7 @@ import {
   processAlert,
   getActiveAlertCount,
 } from './alertManager.js';
+import { initChatServer } from './server.js';
 
 // ─── Configuration ───────────────────────────────────────────────
 const ZONE_INTERVAL_MS = 15000; // 15 seconds between zone predictions (free-tier safe)
@@ -271,6 +272,14 @@ async function main() {
 
   // Initialize alert manager
   initAlertManager(db);
+
+  // Initialize Chat Proxy Server
+  const chatbotKey = process.env.GEMINI_API_KEY_CHATBOT;
+  if (chatbotKey && chatbotKey !== 'your_chatbot_gemini_key_here') {
+    initChatServer(chatbotKey);
+  } else {
+    console.warn('[WARN] GEMINI_API_KEY_CHATBOT not set — Chat Server will fail');
+  }
 
   // Start listening for zone data updates and heartbeats
   startZoneListeners();

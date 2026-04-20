@@ -10,10 +10,10 @@
  */
 
 // ═══════════════════════════════════════════════════════════════
-// ═══ CHATBOT GEMINI API KEY (loaded from config.js, git-ignored) ═══
-// To regenerate: node setup-config.js
+// ═══ Chatbot proxies all AI calls to the secure backend.      ═══
+// ═══ API key is never exposed in the browser.                 ═══
 // ═══════════════════════════════════════════════════════════════
-const GEMINI_API_KEY_CHATBOT = window.NEXGATE_CONFIG?.GEMINI_API_KEY_CHATBOT || '';
+const CHAT_PROXY_URL = 'http://localhost:3001/api/chat';
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Zone Configuration ─────────────────────────────────────────
@@ -271,12 +271,9 @@ async function writeEmergencyAlert() {
 
 // ─── Gemini API Call ────────────────────────────────────────────
 async function callGemini(userText, isFollowUp = false) {
-  if (
-    !GEMINI_API_KEY_CHATBOT ||
-    GEMINI_API_KEY_CHATBOT === 'YOUR_CHATBOT_GEMINI_KEY_HERE'
-  ) {
+  if (!CHAT_PROXY_URL) {
     addBotMessage(
-      "I'm currently offline — my API key hasn't been configured yet. " +
+      "I'm currently offline — the backend server is not running. " +
       'Please ask venue staff for assistance.'
     );
     return;
@@ -332,7 +329,7 @@ async function callGemini(userText, isFollowUp = false) {
     // Retry loop for transient 503 High Demand errors on 3.1 Preview
     while (retries > 0) {
       response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY_CHATBOT}`,
+        `http://localhost:3001/api/chat`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
