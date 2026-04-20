@@ -340,7 +340,8 @@ function sleep(ms) {
 }
 
 // ─── Smart Heartbeat Logic ───────────────────────────────────────
-let lastActiveTimestamp = 0;
+let lastClientTimestamp = 0;
+let lastHeartbeatReceivedServerTime = Date.now();
 let isSleeping = false;
 let sleepResolve = null;
 
@@ -349,9 +350,10 @@ function startHeartbeatListener() {
   hbRef.on('value', (snap) => {
     const val = snap.val();
     // BUG FIX: Ignore false wake-ups from identical timestamps
-    if (val && val > lastActiveTimestamp) {
-      const wasIdle = Date.now() - lastActiveTimestamp > 5 * 60 * 1000;
-      lastActiveTimestamp = val;
+    if (val && val > lastClientTimestamp) {
+      const wasIdle = Date.now() - lastHeartbeatReceivedServerTime > 5 * 60 * 1000;
+      lastClientTimestamp = val;
+      lastHeartbeatReceivedServerTime = Date.now(); // Record server's local time
       if (wasIdle && isSleeping && sleepResolve) {
         console.log(
           `\n[WAKE UP] Dashboards active. Resuming high-frequency operational scan.`
@@ -432,7 +434,8 @@ async function main() {
     }
 
     // Smart Sleep Logic
-    const timeSinceActive = Date.now() - lastActiveTimestamp;
+    // BUG FIX: Use the server's own clock to calculate idle time, avoiding client clock-drift issues
+    const timeSinceActive = Date.now() - lastHeartbeatReceivedServerTime;
     const isIdle = timeSinceActive > 5 * 60 * 1000; // 5 mins
 
     if (isIdle) {
