@@ -20,7 +20,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const localEnvPath = path.join(__dirname, '.env');
+const parentEnvPath = path.join(__dirname, '..', '.env');
+dotenv.config({ path: fs.existsSync(localEnvPath) ? localEnvPath : parentEnvPath });
 import { initGemini, predictZone, recordReading } from './predictor.js';
 import {
   initAlertManager,
@@ -31,18 +33,16 @@ import { initChatServer } from './server.js';
 
 // ─── Configuration ───────────────────────────────────────────────
 const ZONE_INTERVAL_MS = 15000; // 15 seconds between zone predictions (free-tier safe)
-const ZONES_CONFIG_PATH = path.join(
-  __dirname,
-  '..',
-  'simulator',
-  'zones_config.json'
-);
-const EVENT_SCHEDULE_PATH = path.join(
-  __dirname,
-  '..',
-  'simulator',
-  'event_schedule.json'
-);
+const defaultZonesPath = fs.existsSync(path.join(__dirname, 'zones_config.json'))
+  ? path.join(__dirname, 'zones_config.json')
+  : path.join(__dirname, '..', 'simulator', 'zones_config.json');
+
+const defaultEventsPath = fs.existsSync(path.join(__dirname, 'event_schedule.json'))
+  ? path.join(__dirname, 'event_schedule.json')
+  : path.join(__dirname, '..', 'simulator', 'event_schedule.json');
+
+const ZONES_CONFIG_PATH = defaultZonesPath;
+const EVENT_SCHEDULE_PATH = defaultEventsPath;
 
 // ─── Load zone + event configs ───────────────────────────────────
 let zones = [];
@@ -63,9 +63,11 @@ let db = null;
 function initFirebase() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const dbUrl = process.env.FIREBASE_DATABASE_URL;
-  const credPath =
-    process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
-    path.join(__dirname, '..', 'serviceAccountKey.json');
+  const defaultCredPath = fs.existsSync(path.join(__dirname, 'serviceAccountKey.json')) 
+    ? path.join(__dirname, 'serviceAccountKey.json')
+    : path.join(__dirname, '..', 'serviceAccountKey.json');
+    
+  const credPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || defaultCredPath;
 
   if (!dbUrl) {
     console.error('[FATAL] FIREBASE_DATABASE_URL not set in .env');
@@ -74,15 +76,20 @@ function initFirebase() {
 
   try {
     let credential;
-    if (fs.existsSync(credPath)) {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+      // 1. Prioritize raw JSON string injected via Cloud Run env vars
+      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+      credential = admin.credential.cert(serviceAccount);
+      console.log('[OK] Loaded Firebase credentials from FIREBASE_SERVICE_ACCOUNT_JSON env var');
+    } else if (fs.existsSync(credPath)) {
+      // 2. Fall back to local file
       const serviceAccount = JSON.parse(fs.readFileSync(credPath, 'utf-8'));
       credential = admin.credential.cert(serviceAccount);
+      console.log(`[OK] Loaded Firebase credentials from ${credPath}`);
     } else {
-      // Try default credentials (for Cloud Run / app-default-credentials)
+      // 3. Fall back to application default credentials (ADC)
       credential = admin.credential.applicationDefault();
-      console.log(
-        '[WARN] No service account file — using application default credentials'
-      );
+      console.log('[WARN] No service account file or JSON env var found — using ADC');
     }
 
     admin.initializeApp({
