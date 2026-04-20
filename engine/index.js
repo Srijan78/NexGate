@@ -73,7 +73,9 @@ let simulatorStartTime = null;
 
 function getElapsedMinutes() {
   if (!simulatorStartTime) return 0;
-  return (Date.now() - simulatorStartTime) / 60000;
+  const rawMinutes = (Date.now() - simulatorStartTime) / 60000;
+  const speed = parseInt(process.env.SIMULATION_SPEED || '1', 10);
+  return (rawMinutes * speed) % 120; // Loop seamlessly every 120 minutes
 }
 
 function getActiveEvent(elapsedMinutes) {
@@ -215,7 +217,8 @@ function getEventContext() {
   // Calculate simulated elapsed minutes
   const speed = parseInt(process.env.SIMULATION_SPEED || '1', 10);
   const realElapsed = (Date.now() - engineStartTime) / 1000;
-  const elapsedMinutes = (realElapsed * speed) / 60;
+  const rawMinutes = (realElapsed * speed) / 60;
+  const elapsedMinutes = rawMinutes % 120; // Loop seamlessly every 120 minutes
 
   // Find upcoming or active event
   let context = 'Match in progress';
@@ -345,7 +348,8 @@ function startHeartbeatListener() {
   const hbRef = db.ref('system/last_active');
   hbRef.on('value', (snap) => {
     const val = snap.val();
-    if (val) {
+    // BUG FIX: Ignore false wake-ups from identical timestamps
+    if (val && val > lastActiveTimestamp) {
       const wasIdle = Date.now() - lastActiveTimestamp > 5 * 60 * 1000;
       lastActiveTimestamp = val;
       if (wasIdle && isSleeping && sleepResolve) {
