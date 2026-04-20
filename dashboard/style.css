@@ -1353,9 +1353,15 @@ body {
 /* ─── Typing Indicator ───────────────────────────────────────── */
 .chatbot-typing {
   display: flex;
-  align-items: center;
-  gap: 5px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   padding: 10px 12px;
+}
+
+.chatbot-typing-dots {
+  display: flex;
+  gap: 5px;
 }
 
 .chatbot-typing-dot {
@@ -1364,6 +1370,14 @@ body {
   border-radius: 50%;
   background: var(--ng-text-muted);
   animation: chatbot-bounce 1.4s ease-in-out infinite;
+}
+
+.chatbot-typing-status {
+  font-size: 10px;
+  color: var(--ng-text-muted);
+  font-style: italic;
+  opacity: 0.7;
+  letter-spacing: 0.2px;
 }
 
 .chatbot-typing-dot:nth-child(2) {

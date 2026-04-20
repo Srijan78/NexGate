@@ -344,6 +344,7 @@ async function callGemini(userText, isFollowUp = false) {
 
       if (response.status === 503) {
         console.warn(`[Chatbot] Gemini 3.1 High Demand (503). Retrying in ${delayMs}ms... (${retries} attempts left)`);
+        showTypingIndicator("Server in high demand... retrying");
         await new Promise((resolve) => setTimeout(resolve, delayMs));
         retries--;
         delayMs *= 2; // Exponential backoff
@@ -468,7 +469,7 @@ function addEmergencyMessage(text) {
 }
 
 // ─── Typing Indicator ───────────────────────────────────────────
-function showTypingIndicator() {
+function showTypingIndicator(statusText = "Thinking...") {
   const container = document.getElementById('chatbot-messages');
   // Remove any existing indicator
   hideTypingIndicator();
@@ -478,9 +479,12 @@ function showTypingIndicator() {
   indicator.id = 'chatbot-typing-indicator';
   indicator.innerHTML = `
     <div class="chatbot-bubble chatbot-bubble-bot chatbot-typing">
-      <span class="chatbot-typing-dot"></span>
-      <span class="chatbot-typing-dot"></span>
-      <span class="chatbot-typing-dot"></span>
+      <div class="chatbot-typing-dots">
+        <span class="chatbot-typing-dot"></span>
+        <span class="chatbot-typing-dot"></span>
+        <span class="chatbot-typing-dot"></span>
+      </div>
+      <span class="chatbot-typing-status">${statusText}</span>
     </div>
   `;
   container.appendChild(indicator);
