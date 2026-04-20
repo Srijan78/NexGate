@@ -52,6 +52,8 @@ async function init() {
 
   if (firebaseReady) {
     setConnectionStatus('online', 'Live');
+    // Immediately clear the loading badge — Firebase is live
+    document.querySelector('#event-context .event-text').textContent = 'Match In Progress';
     startFirebaseListeners();
   } else {
     setConnectionStatus('diagnostic', 'Diagnostic Feed');
