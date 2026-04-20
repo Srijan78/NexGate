@@ -170,6 +170,22 @@ async function startFirebaseListeners() {
 
   // Store Firebase refs for resolve button
   window._firebaseRefs = { ref, update, db };
+
+  // ─── Event Context Badge ──────────────────────────────────────────────────
+  // The engine writes the current event label to system/event_context.
+  // We listen here so the badge always reflects the engine's knowledge.
+  const eventEl = document.getElementById('event-context');
+
+  const eventCtxRef = ref(db, 'system/event_context');
+  onValue(eventCtxRef, (snap) => {
+    const ctx = snap.val();
+    if (ctx && typeof ctx === 'string') {
+      eventEl.querySelector('.event-text').textContent = ctx;
+    } else {
+      // Fallback: show a live match clock using the heartbeat timestamp
+      eventEl.querySelector('.event-text').textContent = 'Match In Progress';
+    }
+  });
 }
 
 // ─── Zone Card Rendering ─────────────────────────────────────

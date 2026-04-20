@@ -159,6 +159,13 @@ async function runPredictionCycle() {
     `(t=${elapsedMinutes.toFixed(1)}min, ${context}) ──`
   );
 
+  // Publish event context to Firebase so the dashboard badge stays current
+  try {
+    await db.ref('system/event_context').set(context);
+  } catch (e) {
+    console.warn('[Engine] Could not write event_context to Firebase:', e.message);
+  }
+
   for (let i = 0; i < zones.length; i++) {
     const zone = zones[i];
 
