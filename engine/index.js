@@ -89,7 +89,7 @@ function getActiveEvent(elapsedMinutes) {
   return active;
 }
 
-function calculateZoneDensity(zone, elapsedMinutes, activeEvent) {
+export function calculateZoneDensity(zone, elapsedMinutes, activeEvent) {
   let density = zone.base_load;
   density += Math.sin(elapsedMinutes * 0.1) * 8; // sinusoidal variation ±8%
   density += (Math.random() - 0.5) * 10;          // random noise ±5%
@@ -110,14 +110,14 @@ function calculateZoneDensity(zone, elapsedMinutes, activeEvent) {
   return Math.round(Math.max(0, Math.min(100, density)) * 10) / 10;
 }
 
-function calculateQueueLength(density, capacity) {
+export function calculateQueueLength(density, capacity) {
   if (density < 50) return Math.floor(Math.random() * capacity * 0.02);
   if (density < 70) return Math.floor(capacity * 0.02 + Math.random() * capacity * 0.06);
   if (density < 85) return Math.floor(capacity * 0.08 + Math.random() * capacity * 0.07);
   return Math.floor(capacity * 0.15 + Math.random() * capacity * 0.10);
 }
 
-function calculateConcessionData(stand, elapsedMinutes, activeEvent) {
+export function calculateConcessionData(stand, elapsedMinutes, activeEvent) {
   const isHalftime = activeEvent && activeEvent.label && activeEvent.label.includes('Halftime');
   let load, lanesOpen, predictedSurge;
 
