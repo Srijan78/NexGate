@@ -1,9 +1,9 @@
 /**
  * NexGate — Gemini Prediction Engine (predictor.js)
  * =================================================
- * Reads zone sensor data from Firebase, calls Gemini 1.5 Flash,
+ * Reads zone sensor data from Firebase, calls Gemini 3.1 Flash Lite,
  * writes predictions back. Processes zones in staggered fashion
- * (~7.5s apart) to avoid rate limits.
+ * (~15s apart) to stay within free-tier rate limits.
  *
  * Includes per-zone caching and moving-average fallback.
  */
