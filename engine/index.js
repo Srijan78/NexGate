@@ -274,19 +274,28 @@ async function main() {
   initAlertManager(db);
 
   // Initialize Chat Proxy Server
-  const chatbotKey = process.env.GEMINI_API_KEY_CHATBOT;
-  if (chatbotKey && chatbotKey !== 'your_chatbot_gemini_key_here') {
+  // Falls back to GEMINI_API_KEY if dedicated chatbot key is not set,
+  // since both services can share the same API key on the free tier.
+  const chatbotKey =
+    process.env.GEMINI_API_KEY_CHATBOT || process.env.GEMINI_API_KEY;
+  if (chatbotKey) {
     initChatServer(chatbotKey);
   } else {
-    console.warn('[WARN] GEMINI_API_KEY_CHATBOT not set — Chat Server will fail');
+    // Start server anyway so the dashboard gets a clean 503 instead of
+    // a TCP connection-refused error that is hard to debug.
+    console.warn(
+      '[WARN] No Gemini key found — Chat Server will start but return 503 on requests.'
+    );
+    initChatServer(null);
   }
 
   // Start listening for zone data updates and heartbeats
   startZoneListeners();
   startHeartbeatListener();
 
-  // Wait a few seconds for initial readings to arrive
-  console.log('[...] Waiting 30s before the first prediction cycle to sync with the zone stagger loop...');
+  // Wait for Firebase listeners to receive their first batch of zone readings
+  // before starting predictions, so we have real data on cycle #1.
+  console.log('[...] Waiting 30s for initial zone readings to arrive from the simulator...');
   await sleep(30000);
 
   // Run prediction loop indefinitely
