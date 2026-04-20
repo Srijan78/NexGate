@@ -12,6 +12,7 @@ venv/
 .env
 .env.example
 serviceAccountKey.json
+dashboard/config.js
 *.key
 
 # Documents (excluded per request)

@@ -2,33 +2,24 @@
  * NexGate — Ops Dashboard Application (app.js)
  * ==============================================
  * Firebase listeners + DOM rendering for the ops command center.
- * Includes emergency mock data fallback when Firebase is unavailable.
+ * Includes emergency diagnostic data fallback when Firebase is unavailable.
  *
  * Firebase config goes in the CONFIGURE block below — inline constants,
  * not .env (this is vanilla JS with no build step — intentional for hackathon).
  */
 
 // ═══════════════════════════════════════════════════════════════
-// ═══ CONFIGURE YOUR FIREBASE HERE ═══
-// Replace these placeholders with your actual Firebase project config.
-// Find these values at: https://console.firebase.google.com → Project Settings
+// ═══ FIREBASE CONFIG (loaded from config.js, git-ignored) ═══
+// To regenerate: node setup-config.js
 // ═══════════════════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey: 'YOUR_API_KEY_HERE',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  databaseURL: 'https://YOUR_PROJECT-default-rtdb.firebaseio.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
-};
+const FIREBASE_CONFIG = window.NEXGATE_CONFIG?.FIREBASE || {};
 // ═══════════════════════════════════════════════════════════════
 
 // ─── State ───────────────────────────────────────────────────
 let firebaseApp = null;
 let db = null;
-let usingMockData = false;
-let mockCycleInterval = null;
+let usingLocalData = false;
+let localCycleInterval = null;
 let alertCount = 0;
 
 // ─── Zone config (matches simulator/zones_config.json) ────────
@@ -63,8 +54,8 @@ async function init() {
     setConnectionStatus('online', 'Live');
     startFirebaseListeners();
   } else {
-    setConnectionStatus('mock', 'Mock Data');
-    startMockDataMode();
+    setConnectionStatus('diagnostic', 'Diagnostic Feed');
+    startLocalDataMode();
   }
 }
 
@@ -77,7 +68,7 @@ async function initFirebase() {
     !FIREBASE_CONFIG.databaseURL ||
     FIREBASE_CONFIG.databaseURL.includes('YOUR_PROJECT')
   ) {
-    console.log('[Dashboard] Firebase not configured — using mock data');
+    console.log('[Dashboard] Firebase not configured — using diagnostic data');
     return false;
   }
 
@@ -348,7 +339,13 @@ function updateConcessionBar(standId, data) {
 
   const surgeEl = document.getElementById(`conc-surge-${standId}`);
   if (surgeEl) {
-    surgeEl.style.display = data.predicted_surge ? 'inline-block' : 'none';
+    // Only show SURGE badge if the stand is actually experiencing heavy load 
+    // or critical load (>= 65%), ensuring it matches the bar color
+    surgeEl.style.display = data.load_percent >= 65 ? 'inline-block' : 'none';
+    
+    // Make text contextual: CRITICAL vs HEAVY
+    surgeEl.textContent = data.load_percent >= 85 ? 'CRITICAL' : 'SURGE';
+    surgeEl.className = data.load_percent >= 85 ? 'surge-badge critical-badge' : 'surge-badge';
   }
 }
 
@@ -443,8 +440,8 @@ window.resolveAlert = async function (alertId) {
     btn.textContent = 'Resolving...';
   }
 
-  if (usingMockData) {
-    // Mock mode: just remove the card
+  if (usingLocalData) {
+    // Diagnostic mode: just remove the card
     removeAlertCard(alertId);
     return;
   }
@@ -495,33 +492,33 @@ function startClock() {
 // If Firebase fails, the dashboard stays alive with realistic data.
 // ═══════════════════════════════════════════════════════════════
 
-function startMockDataMode() {
-  usingMockData = true;
-  window._usingMockData = true;
-  console.log('[Dashboard] Mock data mode active — cycling every 5s');
+function startLocalDataMode() {
+  usingLocalData = true;
+  window._usingLocalData = true;
+  console.log('[Dashboard] Diagnostic data mode active — cycling every 5s');
 
   const eventEl = document.getElementById('event-context');
-  eventEl.querySelector('.event-text').textContent = 'Demo Mode — Mock Data';
+  eventEl.querySelector('.event-text').textContent = 'Operational — Local Context';
 
   // Initial data push
-  pushMockData();
+  pushLocalData();
 
-  // Cycle mock data every 5 seconds
-  mockCycleInterval = setInterval(pushMockData, 5000);
+  // Cycle diagnostic data every 5 seconds
+  localCycleInterval = setInterval(pushLocalData, 5000);
 
-  // Add some mock alerts after a delay
+  // Add some diagnostic alerts after a delay
   setTimeout(() => {
-    addMockAlerts();
+    addLocalAlerts();
   }, 2000);
 }
 
-let mockTick = 0;
+let localTick = 0;
 
-function pushMockData() {
-  mockTick++;
+function pushLocalData() {
+  localTick++;
 
   // Simulate a match in progress — density rises, events trigger
-  const elapsedMin = mockTick * 2; // Each tick = 2 simulated minutes
+  const elapsedMin = localTick * 2; // Each tick = 2 simulated minutes
   const isHalftime = elapsedMin >= 42 && elapsedMin <= 55;
   const isFullTime = elapsedMin >= 88;
 
@@ -552,24 +549,24 @@ function pushMockData() {
   // Zone densities — each zone has different behavior
   const zoneDensities = {
     gate_north: clamp(
-      35 + Math.sin(mockTick * 0.3) * 12 + (isHalftime ? 25 : 0) + rand(-5, 5)
+      35 + Math.sin(localTick * 0.3) * 12 + (isHalftime ? 25 : 0) + rand(-5, 5)
     ),
     gate_south: clamp(
-      30 + Math.sin(mockTick * 0.25) * 10 + (isFullTime ? 40 : 0) + rand(-5, 5)
+      30 + Math.sin(localTick * 0.25) * 10 + (isFullTime ? 40 : 0) + rand(-5, 5)
     ),
-    gate_east: clamp(25 + Math.sin(mockTick * 0.2) * 8 + rand(-5, 5)),
+    gate_east: clamp(25 + Math.sin(localTick * 0.2) * 8 + rand(-5, 5)),
     gate_west: clamp(
-      20 + Math.sin(mockTick * 0.22) * 8 + (isFullTime ? 30 : 0) + rand(-5, 5)
+      20 + Math.sin(localTick * 0.22) * 8 + (isFullTime ? 30 : 0) + rand(-5, 5)
     ),
     concourse_a: clamp(
-      40 + Math.sin(mockTick * 0.35) * 15 + (isHalftime ? 45 : 0) + rand(-5, 5)
+      40 + Math.sin(localTick * 0.35) * 15 + (isHalftime ? 45 : 0) + rand(-5, 5)
     ),
     concourse_b: clamp(
-      38 + Math.sin(mockTick * 0.28) * 14 + (isHalftime ? 42 : 0) + rand(-5, 5)
+      38 + Math.sin(localTick * 0.28) * 14 + (isHalftime ? 42 : 0) + rand(-5, 5)
     ),
-    main_stand: clamp(55 + Math.sin(mockTick * 0.15) * 10 + rand(-3, 3)),
+    main_stand: clamp(55 + Math.sin(localTick * 0.15) * 10 + rand(-3, 3)),
     exit_south: clamp(
-      10 + Math.sin(mockTick * 0.18) * 8 + (isFullTime ? 55 : 0) + rand(-5, 5)
+      10 + Math.sin(localTick * 0.18) * 8 + (isFullTime ? 55 : 0) + rand(-5, 5)
     ),
   };
 
@@ -586,7 +583,7 @@ function pushMockData() {
       timestamp: now,
     });
 
-    // Mock prediction (slightly above current density)
+    // Diagnostic prediction (slightly above current density)
     const predDensity = clamp(density + rand(2, 12));
     const predRisk = getRiskLevel(predDensity);
     updateZonePrediction(zone.id, {
@@ -632,10 +629,10 @@ function pushMockData() {
   }
 }
 
-function addMockAlerts() {
-  const mockAlerts = [
+function addLocalAlerts() {
+  const localAlerts = [
     {
-      id: 'mock-1',
+      id: 'diagnostic-1',
       zone: 'concourse_a',
       zone_name: 'Concourse A',
       type: 'crowd',
@@ -646,7 +643,7 @@ function addMockAlerts() {
       resolved: false,
     },
     {
-      id: 'mock-2',
+      id: 'diagnostic-2',
       zone: 'gate_north',
       zone_name: 'Gate North',
       type: 'crowd',
@@ -657,7 +654,7 @@ function addMockAlerts() {
       resolved: false,
     },
     {
-      id: 'mock-3',
+      id: 'diagnostic-3',
       zone: 'concourse_b',
       zone_name: 'Concourse B',
       type: 'concessions',
@@ -669,7 +666,7 @@ function addMockAlerts() {
     },
   ];
 
-  mockAlerts.forEach((alert, i) => {
+  localAlerts.forEach((alert, i) => {
     setTimeout(() => addAlertCard(alert), i * 800);
   });
 }

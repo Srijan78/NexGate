@@ -35,15 +35,15 @@ let model = null;
 export function initGemini(apiKey) {
   const genAI = new GoogleGenerativeAI(apiKey);
   model = genAI.getGenerativeModel({
-    model: 'gemini-3-flash',
+    model: 'gemini-3.1-flash-lite-preview',
     systemInstruction: SYSTEM_PROMPT,
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.2,
-      maxOutputTokens: 256,
+      maxOutputTokens: 1024,
     },
   });
-  console.log('[OK] Gemini model initialized (gemini-1.5-flash)');
+  console.log('[OK] Gemini model initialized (gemini-3.1-flash-lite-preview)');
 }
 
 /**
@@ -194,8 +194,8 @@ export async function predictZone(zone, eventContext = 'Match in progress') {
 
         console.log(
           `  [${zone.id}] Gemini → risk=${prediction.risk_level} ` +
-            `density_10m=${prediction.predicted_density_10m}% ` +
-            `conf=${prediction.confidence}`
+          `density_10m=${prediction.predicted_density_10m}% ` +
+          `conf=${prediction.confidence}`
         );
 
         return prediction;
@@ -243,7 +243,7 @@ export async function predictZone(zone, eventContext = 'Match in progress') {
 
   console.log(
     `  [${zone.id}] Fallback → risk=${result.risk_level} ` +
-      `density_10m=${result.predicted_density_10m}%`
+    `density_10m=${result.predicted_density_10m}%`
   );
 
   return result;

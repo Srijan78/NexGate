@@ -10,11 +10,10 @@
  */
 
 // ═══════════════════════════════════════════════════════════════
-// ═══ PASTE YOUR CHATBOT GEMINI API KEY HERE ═══
-// This is a SEPARATE key from the prediction engine.
-// Get one free at: https://aistudio.google.com/app/apikey
+// ═══ CHATBOT GEMINI API KEY (loaded from config.js, git-ignored) ═══
+// To regenerate: node setup-config.js
 // ═══════════════════════════════════════════════════════════════
-const GEMINI_API_KEY_CHATBOT = 'YOUR_CHATBOT_GEMINI_KEY_HERE';
+const GEMINI_API_KEY_CHATBOT = window.NEXGATE_CONFIG?.GEMINI_API_KEY_CHATBOT || '';
 // ═══════════════════════════════════════════════════════════════
 
 // ─── Zone Configuration ─────────────────────────────────────────
@@ -55,13 +54,9 @@ const EMERGENCY_KEYWORDS = [
 ];
 
 // ─── State ──────────────────────────────────────────────────────
-let selectedZoneId = null;
-let selectedZoneName = '';
 let conversationHistory = []; // { role: 'user'|'model', parts: [{ text }] }
-let currentZoneData = null; // live density/queue/risk from Firebase
-let neighbourData = {}; // { zoneId: { density, queue, name } }
-let zoneListener = null; // Firebase onValue unsubscribe
-let neighbourListeners = []; // Firebase onValue unsubscribes
+let allZoneData = {}; // { zoneId: { density, name, wait_minutes, timestamp } }
+let zoneListeners = []; // Firebase onValue unsubscribes
 let isWaitingForGemini = false;
 let chatbotPanelOpen = false;
 
@@ -73,7 +68,6 @@ let fbSet = null;
 
 // ─── Init ───────────────────────────────────────────────────────
 async function initChatbot() {
-  renderZoneSelector();
   setupEventListeners();
 
   // Load Firebase SDK functions for chatbot use
@@ -89,6 +83,21 @@ async function initChatbot() {
       '[Chatbot] Firebase SDK not available — will work without live data'
     );
   }
+
+  // Setup UI for full stadium chat
+  document.getElementById('chatbot-zone-selector').style.display = 'none';
+  document.getElementById('chatbot-zone-status').style.display = 'none';
+  document.getElementById('chatbot-change-zone').style.display = 'none';
+  document.getElementById('chatbot-messages').style.display = 'flex';
+  document.getElementById('chatbot-input-area').style.display = 'flex';
+  
+  // Add welcome message
+  addBotMessage(
+    `NexGate Ops Intel initialized. 🌐\n\nI am monitoring all 8 stadium zones. I can assist with:\n• Crowd levels & queue times\n• Gate flow & fan redirection\n• Emergency operations\n\nWhat is the current operational situation?`
+  );
+
+  // Start live data listeners for all zones
+  startAllZoneListeners();
 }
 
 // ─── Event Listeners ────────────────────────────────────────────
@@ -105,10 +114,10 @@ function setupEventListeners() {
     toggle.addEventListener('click', togglePanel);
   }
 
-  // Change zone
+  // Change zone button is deprecated, we monitor all zones
   const changeBtn = document.getElementById('chatbot-change-zone');
   if (changeBtn) {
-    changeBtn.addEventListener('click', resetToZoneSelector);
+    changeBtn.style.display = 'none';
   }
 
   // Send message
@@ -144,176 +153,27 @@ function togglePanel() {
   }
 }
 
-// ─── Zone Selector ──────────────────────────────────────────────
-function renderZoneSelector() {
-  const selector = document.getElementById('chatbot-zone-selector');
-  if (!selector) return;
-
-  selector.innerHTML = `
-    <p class="chatbot-selector-label">Select your current zone:</p>
-    <div class="chatbot-zone-grid">
-      ${CHAT_ZONES.map(
-        (z) => `
-        <button class="chatbot-zone-btn" data-zone-id="${z.id}">
-          <span class="chatbot-zone-btn-icon">${z.icon}</span>
-          <span class="chatbot-zone-btn-name">${z.name}</span>
-        </button>
-      `
-      ).join('')}
-    </div>
-  `;
-
-  // Attach click handlers
-  selector.querySelectorAll('.chatbot-zone-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const zoneId = btn.dataset.zoneId;
-      selectZone(zoneId);
-    });
-  });
-}
-
-// ─── Select Zone ────────────────────────────────────────────────
-function selectZone(zoneId) {
-  const zone = CHAT_ZONES.find((z) => z.id === zoneId);
-  if (!zone) return;
-
-  selectedZoneId = zoneId;
-  selectedZoneName = zone.name;
-  conversationHistory = [];
-  neighbourData = {};
-
-  // Hide selector, show chat UI
-  document.getElementById('chatbot-zone-selector').style.display = 'none';
-  document.getElementById('chatbot-messages').style.display = 'flex';
-  document.getElementById('chatbot-input-area').style.display = 'flex';
-  document.getElementById('chatbot-zone-status').style.display = 'flex';
-  document.getElementById('chatbot-change-zone').style.display = 'inline-flex';
-
-  // Clear messages
-  const msgContainer = document.getElementById('chatbot-messages');
-  msgContainer.innerHTML = '';
-
-  // Add welcome message
-  addBotMessage(
-    `Welcome to **${zone.name}**! 👋\n\nI can help you with:\n• Crowd levels & wait times\n• Finding shorter queues nearby\n• Food & concession info\n• Directions & wayfinding\n\nWhat would you like to know?`
-  );
-
-  // Start live data listeners
-  startZoneListener(zoneId);
-  startNeighbourListeners(zoneId);
-}
-
-// ─── Reset to Zone Selector ─────────────────────────────────────
-function resetToZoneSelector() {
-  // Detach all listeners
-  if (zoneListener) {
-    zoneListener();
-    zoneListener = null;
-  }
-  neighbourListeners.forEach((unsub) => unsub());
-  neighbourListeners = [];
-
-  // Reset state
-  selectedZoneId = null;
-  selectedZoneName = '';
-  conversationHistory = [];
-  currentZoneData = null;
-  neighbourData = {};
-
-  // Hide chat UI, show selector
-  document.getElementById('chatbot-zone-selector').style.display = 'block';
-  document.getElementById('chatbot-messages').style.display = 'none';
-  document.getElementById('chatbot-input-area').style.display = 'none';
-  document.getElementById('chatbot-zone-status').style.display = 'none';
-  document.getElementById('chatbot-change-zone').style.display = 'none';
-
-  // Clear messages
-  document.getElementById('chatbot-messages').innerHTML = '';
-
-  // Re-render zone buttons
-  renderZoneSelector();
-}
-
-// ─── Firebase Zone Listener ─────────────────────────────────────
-function startZoneListener(zoneId) {
-  const db = window._firebaseDb;
-  if (!db || !fbRef || !fbOnValue) {
-    // Mock mode — use static data
-    currentZoneData = {
-      density: 42,
-      queue_length: 85,
-      risk: 'low',
-      action: 'Operating within normal parameters.',
-      wait_minutes: 3.2,
-    };
-    updateZoneStatusCard();
-    return;
-  }
-
-  // Listen to current zone data
-  const currentRef = fbRef(db, `zones/${zoneId}/current`);
-  const predRef = fbRef(db, `zones/${zoneId}/predictions/next_10m`);
-
-  let currentData = {};
-  let predData = {};
-
-  const unsub1 = fbOnValue(currentRef, (snap) => {
-    const data = snap.val();
-    if (data) {
-      currentData = data;
-      mergeZoneData(currentData, predData);
-    }
-  });
-
-  const unsub2 = fbOnValue(predRef, (snap) => {
-    const data = snap.val();
-    if (data) {
-      predData = data;
-      mergeZoneData(currentData, predData);
-    }
-  });
-
-  // Store composite unsubscribe
-  zoneListener = () => {
-    unsub1();
-    unsub2();
-  };
-}
-
-function mergeZoneData(current, pred) {
-  currentZoneData = {
-    density: current.density || 0,
-    queue_length: current.queue_length || 0,
-    timestamp: current.timestamp || '',
-    risk: pred.risk || getRiskFromDensity(current.density || 0),
-    action: pred.action || '',
-    wait_minutes: estimateWait(current.density || 0),
-  };
-  updateZoneStatusCard();
-}
-
-function getRiskFromDensity(d) {
-  if (d >= 90) return 'critical';
-  if (d >= 75) return 'high';
-  if (d >= 60) return 'medium';
-  return 'low';
-}
-
+// ─── Utility ────────────────────────────────────────────────────
 function estimateWait(density) {
   return Math.round((density / 100) * 18 * 10) / 10;
 }
 
-// ─── Neighbour Listeners ────────────────────────────────────────
-function startNeighbourListeners(zoneId) {
+// ─── Firebase Zone Listeners ────────────────────────────────────
+function startAllZoneListeners(retryCount = 0) {
   const db = window._firebaseDb;
-  const neighbours = ZONE_NEIGHBOURS[zoneId] || [];
-
+  
   if (!db || !fbRef || !fbOnValue) {
-    // Mock mode — populate with dummy data
-    neighbours.forEach((nId) => {
-      const zone = CHAT_ZONES.find((z) => z.id === nId);
-      neighbourData[nId] = {
-        name: zone ? zone.name : nId,
+    // Firebase might not be ready yet — retry up to 10 times (5 seconds)
+    if (retryCount < 10) {
+      console.log(`[Chatbot] Firebase not ready, retrying in 500ms... (attempt ${retryCount + 1})`);
+      setTimeout(() => startAllZoneListeners(retryCount + 1), 500);
+      return;
+    }
+    // After 10 retries, fall back to mock mode
+    console.warn('[Chatbot] Firebase unavailable after 10 retries — using mock data');
+    CHAT_ZONES.forEach((zone) => {
+      allZoneData[zone.id] = {
+        name: zone.name,
         density: Math.round(20 + Math.random() * 50),
         wait_minutes: Math.round(2 + Math.random() * 8),
       };
@@ -321,53 +181,27 @@ function startNeighbourListeners(zoneId) {
     return;
   }
 
-  neighbours.forEach((nId) => {
-    const nRef = fbRef(db, `zones/${nId}/current`);
-    const zone = CHAT_ZONES.find((z) => z.id === nId);
+  console.log('[Chatbot] Firebase connected — attaching live listeners to all 8 zones');
+  CHAT_ZONES.forEach((zone) => {
+    const nRef = fbRef(db, `zones/${zone.id}/current`);
 
     const unsub = fbOnValue(nRef, (snap) => {
       const data = snap.val();
       if (data) {
-        neighbourData[nId] = {
-          name: zone ? zone.name : nId,
+        allZoneData[zone.id] = {
+          name: zone.name,
           density: data.density || 0,
           wait_minutes: estimateWait(data.density || 0),
+          timestamp: data.timestamp || ''
         };
       }
     });
 
-    neighbourListeners.push(unsub);
+    zoneListeners.push(unsub);
   });
 }
 
-// ─── Zone Status Card ───────────────────────────────────────────
-function updateZoneStatusCard() {
-  const card = document.getElementById('chatbot-zone-status');
-  if (!card || !currentZoneData) return;
-
-  const risk = currentZoneData.risk || 'low';
-
-  card.innerHTML = `
-    <div class="chatbot-status-row">
-      <span class="chatbot-status-zone-name">${selectedZoneName}</span>
-      <span class="risk-badge risk-${risk}">${risk.toUpperCase()}</span>
-    </div>
-    <div class="chatbot-status-metrics">
-      <div class="chatbot-status-metric">
-        <span class="chatbot-status-label">Density</span>
-        <span class="chatbot-status-value">${Math.round(currentZoneData.density)}%</span>
-      </div>
-      <div class="chatbot-status-metric">
-        <span class="chatbot-status-label">Queue</span>
-        <span class="chatbot-status-value">${currentZoneData.queue_length}</span>
-      </div>
-      <div class="chatbot-status-metric">
-        <span class="chatbot-status-label">Wait</span>
-        <span class="chatbot-status-value">${currentZoneData.wait_minutes}m</span>
-      </div>
-    </div>
-  `;
-}
+// Zone Status Card deprecated as the chatbot monitors all zones.
 
 // ─── Message Handling ───────────────────────────────────────────
 async function handleSendMessage() {
@@ -398,7 +232,7 @@ async function handleEmergency(userText) {
   // 1. Immediately show red emergency card
   addEmergencyMessage(
     '🚨 **Emergency detected.** Your alert has been sent to venue operations immediately.\n\n' +
-      'Stay calm. Help is being dispatched to your zone.'
+    'Stay calm. Help is being dispatched to your zone.'
   );
 
   // 2. Write alert to Firebase
@@ -421,11 +255,11 @@ async function writeEmergencyAlert() {
     const alertsRef = fbRef(db, 'alerts');
     const newAlertRef = fbPush(alertsRef);
     await fbSet(newAlertRef, {
-      zone: selectedZoneId,
-      zone_name: selectedZoneName,
+      zone: 'ops_intel',
+      zone_name: 'Command Chat',
       type: 'medical',
       severity: 'critical',
-      message: 'Medical emergency reported by attendee via chat',
+      message: 'Medical emergency reported by staff via chat interface.',
       timestamp: new Date().toISOString(),
       resolved: false,
     });
@@ -443,7 +277,7 @@ async function callGemini(userText, isFollowUp = false) {
   ) {
     addBotMessage(
       "I'm currently offline — my API key hasn't been configured yet. " +
-        'Please ask venue staff for assistance.'
+      'Please ask venue staff for assistance.'
     );
     return;
   }
@@ -478,7 +312,7 @@ async function callGemini(userText, isFollowUp = false) {
           role: 'model',
           parts: [
             {
-              text: 'Understood. I have the live venue data. How can I help you?',
+              text: 'NexGate Ops Intel online. Live sensor data loaded. What is the operational situation?',
             },
           ],
         },
@@ -487,21 +321,39 @@ async function callGemini(userText, isFollowUp = false) {
       ],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 150,
+        maxOutputTokens: 1024,
       },
     };
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${GEMINI_API_KEY_CHATBOT}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+    let response;
+    let retries = 3;
+    let delayMs = 1500;
+
+    // Retry loop for transient 503 High Demand errors on 3.1 Preview
+    while (retries > 0) {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${GEMINI_API_KEY_CHATBOT}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (response.status === 503) {
+        console.warn(`[Chatbot] Gemini 3.1 High Demand (503). Retrying in ${delayMs}ms... (${retries} attempts left)`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        retries--;
+        delayMs *= 2; // Exponential backoff
+      } else {
+        break; // Success or non-503 error, break out of loop
       }
-    );
+    }
 
     if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData?.error?.message || `API returned ${response.status}`;
+      throw new Error(errorMessage);
     }
 
     const data = await response.json();
@@ -516,13 +368,13 @@ async function callGemini(userText, isFollowUp = false) {
     });
 
     hideTypingIndicator();
-    addBotMessage(botText);
+    await addBotMessage(botText);
   } catch (err) {
     console.error('[Chatbot] Gemini call failed:', err);
     hideTypingIndicator();
-    addBotMessage(
+    await addBotMessage(
       "Sorry, I'm having trouble connecting right now. " +
-        'Please ask a nearby steward for help.'
+      'Please ask a nearby steward for help.'
     );
   } finally {
     isWaitingForGemini = false;
@@ -531,52 +383,39 @@ async function callGemini(userText, isFollowUp = false) {
 
 // ─── Build Gemini Context ───────────────────────────────────────
 function buildGeminiContext() {
-  const zd = currentZoneData || {
-    density: 0,
-    queue_length: 0,
-    wait_minutes: 0,
-    risk: 'low',
-    action: '',
-  };
+  const allZonesSection = Object.entries(allZoneData)
+    .map(
+      ([_, nd]) =>
+        `- ${nd.name}: ${Math.round(nd.density)}% density, ~${nd.wait_minutes} min wait`
+    )
+    .join('\n');
 
-  // Filter neighbours: density < 80%, sort ascending, max 2
-  const filteredNeighbours = Object.entries(neighbourData)
-    .filter(([_, nd]) => nd.density < 80)
-    .sort((a, b) => a[1].density - b[1].density)
-    .slice(0, 2);
-
-  let neighbourSection = '';
-  if (filteredNeighbours.length > 0) {
-    neighbourSection = filteredNeighbours
-      .map(
-        ([_, nd]) =>
-          `- ${nd.name}: ${Math.round(nd.density)}% full, ${nd.wait_minutes} min wait`
-      )
-      .join('\n');
-  } else {
-    neighbourSection =
-      '- ALL nearby zones are above 80% capacity (stadium-wide surge)';
+  // Grab any timestamp to show data freshness
+  let dataTimestamp = new Date().toLocaleTimeString();
+  const firstZoneKey = Object.keys(allZoneData)[0];
+  if (firstZoneKey && allZoneData[firstZoneKey].timestamp) {
+    dataTimestamp = new Date(allZoneData[firstZoneKey].timestamp).toLocaleTimeString();
   }
 
-  return `You are NexGate's venue assistant helping an attendee inside a 60,000 seat stadium.
+  return `You are NexGate Ops Intel — an AI assistant for STADIUM OPERATIONS STAFF at a 60,000-seat venue.
 
-ATTENDEE LOCATION: ${selectedZoneName}
-Current density: ${Math.round(zd.density)}%
-Queue length: ${zd.queue_length} people
-Wait time: ${zd.wait_minutes} min
-Risk level: ${zd.risk}
-Recommended action: ${zd.action}
+YOUR ROLE:
+- You assist stewards, security, operations managers, and concession supervisors.
+- You have access to LIVE crowd sensor data from the entire stadium.
+- Your primary focus is crowd safety, zone management, and operational decisions.
 
-NEARBY ZONES ONLY (realistic walking distance):
-${neighbourSection}
+ALL STADIUM ZONES (LIVE SENSOR DATA):
+- Reading at: ${dataTimestamp}
 
-RULES:
-- Only suggest the nearby zones listed above
-- Never suggest zones not in the nearby list
-- If all nearby zones are above 80% density say: 'All nearby zones are at high capacity right now, this is a stadium-wide surge — best to wait 5-7 minutes for it to ease'
-- For medical emergencies: give calm instructions AND reassure that venue ops have been alerted
-- Keep answers short, direct, friendly
-- You know the venue layout — speak with confidence`;
+${allZonesSection || '- No data available yet'}
+
+GUIDELINES:
+- You monitor ALL zones in the stadium equally — you have full sensor coverage.
+- Use professional, concise language suited for operations staff.
+- When density exceeds 85%, recommend IMMEDIATE action (redirect flow, deploy stewards, open overflow lanes).
+- If a question is completely unrelated to the venue or stadium operations (e.g. coding, recipes, politics), gently steer back: "I'm focused on venue ops — is there a zone situation I can help with?"
+- For medical emergencies: give calm, clear instructions and confirm venue ops have been alerted.
+- Always cite the specific density numbers and zone names from the sensor data above.`;
 }
 
 // ─── DOM: Add Messages ──────────────────────────────────────────
@@ -589,13 +428,32 @@ function addUserMessage(text) {
   scrollToBottom();
 }
 
-function addBotMessage(text) {
+// Cache the wait flag for emergencies
+async function addBotMessage(text, isEmergency = false) {
   const container = document.getElementById('chatbot-messages');
   const msg = document.createElement('div');
   msg.className = 'chatbot-msg chatbot-msg-bot';
-  msg.innerHTML = `<div class="chatbot-bubble chatbot-bubble-bot">${formatBotText(text)}</div>`;
+  const bubble = document.createElement('div');
+  bubble.className = isEmergency ? 'chatbot-bubble chatbot-bubble-emergency' : 'chatbot-bubble chatbot-bubble-bot';
+  msg.appendChild(bubble);
   container.appendChild(msg);
   scrollToBottom();
+
+  if (isEmergency) {
+    bubble.innerHTML = formatBotText(text);
+    return;
+  }
+
+  const words = text.split(' ');
+  let currentHTML = '';
+
+  for (let i = 0; i < words.length; i++) {
+    currentHTML += words[i] + ' ';
+    bubble.innerHTML = formatBotText(currentHTML);
+    scrollToBottom();
+    // sleep
+    await new Promise(r => setTimeout(r, 60));
+  }
 }
 
 function addEmergencyMessage(text) {

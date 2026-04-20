@@ -8,8 +8,8 @@ Supports event surges (kickoff, halftime, full time) and configurable speed.
 Fallback mode: If Firebase credentials are missing, outputs JSON to stdout.
 
 Usage:
-    python simulator.py                  # Real-time (1x speed)
-    SIMULATION_SPEED=10 python simulator.py  # Demo mode (10x speed)
+    python simulator.py                      # Real-time monitoring
+    SIMULATION_SPEED=60 python simulator.py  # High-frequency operational mode
 """
 
 import json
@@ -292,7 +292,7 @@ def run_simulator():
                     for zd in zone_data_list
                 )
                 if risk_zones:
-                    status += f" | ⚠ HIGH: {', '.join(risk_zones)}"
+                    status += f" | [!] HIGH: {', '.join(risk_zones)}"
                 print(status)
             else:
                 print_to_stdout(zone_data_list, concession_data_list,

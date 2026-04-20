@@ -11,9 +11,9 @@
   --ng-elevated: #1c1c1c;
   --ng-border-hi: #2a2a2a;
   --ng-border-lo: #080808;
-  --ng-text-pri: #e0e0e0;
-  --ng-text-sec: #888888;
-  --ng-text-muted: #444444;
+  --ng-text-pri: #f5f5f5;
+  --ng-text-sec: #c0c0c0;
+  --ng-text-muted: #a0a0a0;
 
   /* Status / Risk */
   --ng-safe: #22c55e;
@@ -168,12 +168,12 @@ body {
   animation: pulse-dot 1s ease-in-out infinite;
 }
 
-.status-mock .status-dot {
+.status-diagnostic .status-dot {
   background: var(--ng-safe);
   box-shadow: 0 0 6px var(--ng-safe);
   animation: pulse-dot 2s ease-in-out infinite;
 }
-.status-mock .status-text {
+.status-diagnostic .status-text {
   color: var(--ng-safe);
 }
 
@@ -847,6 +847,12 @@ body {
   color: var(--ng-medium);
   border: 1px solid #3a2400;
   letter-spacing: 1px;
+}
+
+.surge-badge.critical-badge {
+  background: #250a0a;
+  color: var(--ng-high);
+  border-color: #4a1010;
 }
 
 /* ─── Animations ────────────────────────────────────────────── */

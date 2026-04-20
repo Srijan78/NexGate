@@ -13,11 +13,14 @@
  *   node index.js
  */
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 import { initGemini, predictZone, recordReading } from './predictor.js';
 import {
   initAlertManager,
@@ -25,11 +28,8 @@ import {
   getActiveAlertCount,
 } from './alertManager.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // ─── Configuration ───────────────────────────────────────────────
-const ZONE_INTERVAL_MS = 7500; // 7.5 seconds between zone predictions
+const ZONE_INTERVAL_MS = 15000; // 15 seconds between zone predictions (free-tier safe)
 const ZONES_CONFIG_PATH = path.join(
   __dirname,
   '..',
@@ -155,7 +155,7 @@ async function runPredictionCycle() {
 
   console.log(
     `\n── Prediction cycle #${cycleCount} ` +
-      `(t=${elapsedMinutes.toFixed(1)}min, ${context}) ──`
+    `(t=${elapsedMinutes.toFixed(1)}min, ${context}) ──`
   );
 
   for (let i = 0; i < zones.length; i++) {
@@ -212,7 +212,7 @@ async function runPredictionCycle() {
 
   console.log(
     `── Cycle #${cycleCount} complete. ` +
-      `Active alerts: ${getActiveAlertCount()} ──\n`
+    `Active alerts: ${getActiveAlertCount()} ──\n`
   );
 }
 
@@ -234,7 +234,7 @@ function startHeartbeatListener() {
       lastActiveTimestamp = val;
       if (wasIdle && isSleeping && sleepResolve) {
         console.log(
-          `\n[WAKE UP] User activity detected! Reactivating Live Demo Mode.`
+          `\n[WAKE UP] Dashboards active. Resuming high-frequency operational scan.`
         );
         isSleeping = false;
         sleepResolve(); // Resolves the sleep Promise instantly!
@@ -277,8 +277,8 @@ async function main() {
   startHeartbeatListener();
 
   // Wait a few seconds for initial readings to arrive
-  console.log('[...] Waiting 5s for initial sensor data...');
-  await sleep(5000);
+  console.log('[...] Waiting 30s before the first prediction cycle to sync with the zone stagger loop...');
+  await sleep(30000);
 
   // Run prediction loop indefinitely
   console.log('[START] Prediction loop starting');
@@ -296,7 +296,7 @@ async function main() {
 
     if (isIdle) {
       console.log(
-        `\n[DEEP SLEEP] System idle (no active dashboards). Hibernating for 30m to save free-tier credits...`
+        `\n[HIBERNATION] System idle. Entering high-efficiency standby mode...`
       );
       isSleeping = true;
       await new Promise((resolve) => {
