@@ -63,7 +63,7 @@ const CONCESSION_STANDS = [
   { id: 'stand_b', name: 'Stand B', base_load: 25, lanes_total: 3 },
   { id: 'stand_c', name: 'Stand C', base_load: 35, lanes_total: 4 },
   { id: 'stand_d', name: 'Stand D', base_load: 20, lanes_total: 3 },
-  { id: 'express',  name: 'Express Kiosk', base_load: 15, lanes_total: 2 },
+  { id: 'express', name: 'Express Kiosk', base_load: 15, lanes_total: 2 },
 ];
 
 // ─── Built-in Simulator (ported from simulator.py) ───────────────────────────
@@ -166,10 +166,10 @@ let db = null;
 function initFirebase() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const dbUrl = process.env.FIREBASE_DATABASE_URL;
-  const defaultCredPath = fs.existsSync(path.join(__dirname, 'serviceAccountKey.json')) 
+  const defaultCredPath = fs.existsSync(path.join(__dirname, 'serviceAccountKey.json'))
     ? path.join(__dirname, 'serviceAccountKey.json')
     : path.join(__dirname, '..', 'serviceAccountKey.json');
-    
+
   const credPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || defaultCredPath;
 
   if (!dbUrl) {
@@ -445,7 +445,7 @@ async function main() {
       isSleeping = true;
       await new Promise((resolve) => {
         sleepResolve = resolve;
-        setTimeout(resolve, 30 * 60 * 1000); // Wait up to 30 mins
+        // Promise will wait indefinitely until sleepResolve() is called by the heartbeat listener.
       });
       isSleeping = false;
       sleepResolve = null;
