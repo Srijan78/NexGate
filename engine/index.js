@@ -57,6 +57,107 @@ try {
   process.exit(1);
 }
 
+// ─── Concession stands ──────────────────────────────────────────────────────
+const CONCESSION_STANDS = [
+  { id: 'stand_a', name: 'Stand A', base_load: 30, lanes_total: 4 },
+  { id: 'stand_b', name: 'Stand B', base_load: 25, lanes_total: 3 },
+  { id: 'stand_c', name: 'Stand C', base_load: 35, lanes_total: 4 },
+  { id: 'stand_d', name: 'Stand D', base_load: 20, lanes_total: 3 },
+  { id: 'express',  name: 'Express Kiosk', base_load: 15, lanes_total: 2 },
+];
+
+// ─── Built-in Simulator (ported from simulator.py) ───────────────────────────
+// Generates realistic sensor readings every 15s so the engine is fully
+// self-contained on Cloud Run without needing the Python simulator.
+let simulatorStartTime = null;
+
+function getElapsedMinutes() {
+  if (!simulatorStartTime) return 0;
+  return (Date.now() - simulatorStartTime) / 60000;
+}
+
+function getActiveEvent(elapsedMinutes) {
+  let active = null;
+  for (const event of events) {
+    const offset = event.time_offset_min;
+    if (offset <= elapsedMinutes && elapsedMinutes <= offset + 10) {
+      if (!active || event.surge_multiplier > active.surge_multiplier) {
+        active = event;
+      }
+    }
+  }
+  return active;
+}
+
+function calculateZoneDensity(zone, elapsedMinutes, activeEvent) {
+  let density = zone.base_load;
+  density += Math.sin(elapsedMinutes * 0.1) * 8; // sinusoidal variation ±8%
+  density += (Math.random() - 0.5) * 10;          // random noise ±5%
+
+  if (activeEvent && Array.isArray(activeEvent.surge_zones) && activeEvent.surge_zones.includes(zone.id)) {
+    const timeIntoEvent = elapsedMinutes - activeEvent.time_offset_min;
+    let surge = 0;
+    if (timeIntoEvent < 3) {
+      surge = (activeEvent.surge_multiplier - 1.0) * (timeIntoEvent / 3.0);
+    } else if (timeIntoEvent < 7) {
+      surge = activeEvent.surge_multiplier - 1.0;
+    } else {
+      const fade = (10 - timeIntoEvent) / 3.0;
+      surge = (activeEvent.surge_multiplier - 1.0) * Math.max(0, fade);
+    }
+    density *= (1.0 + surge);
+  }
+  return Math.round(Math.max(0, Math.min(100, density)) * 10) / 10;
+}
+
+function calculateQueueLength(density, capacity) {
+  if (density < 50) return Math.floor(Math.random() * capacity * 0.02);
+  if (density < 70) return Math.floor(capacity * 0.02 + Math.random() * capacity * 0.06);
+  if (density < 85) return Math.floor(capacity * 0.08 + Math.random() * capacity * 0.07);
+  return Math.floor(capacity * 0.15 + Math.random() * capacity * 0.10);
+}
+
+function calculateConcessionData(stand, elapsedMinutes, activeEvent) {
+  const isHalftime = activeEvent && activeEvent.label && activeEvent.label.includes('Halftime');
+  let load, lanesOpen, predictedSurge;
+
+  if (isHalftime) {
+    load = Math.min(100, stand.base_load * 2.5 + (Math.random() - 0.5) * 15);
+    lanesOpen = stand.lanes_total;
+    predictedSurge = true;
+  } else {
+    load = stand.base_load + (Math.random() - 0.5) * 25;
+    load = Math.max(5, Math.min(95, load));
+    lanesOpen = Math.max(1, Math.round(stand.lanes_total * (load / 100)));
+    predictedSurge = elapsedMinutes > 35 && elapsedMinutes < 45;
+  }
+  const waitMinutes = Math.max(0.5, Math.round((load / 100 * 18 + (Math.random() - 0.5) * 4) * 10) / 10);
+  return { load_percent: Math.round(load * 10) / 10, lanes_open: lanesOpen, wait_minutes: waitMinutes, predicted_surge: predictedSurge };
+}
+
+async function runSimulatorTick() {
+  const elapsedMinutes = getElapsedMinutes();
+  const activeEvent = getActiveEvent(elapsedMinutes);
+  const now = new Date().toISOString();
+  const updates = {};
+
+  for (const zone of zones) {
+    const density = calculateZoneDensity(zone, elapsedMinutes, activeEvent);
+    const queue_length = calculateQueueLength(density, zone.capacity);
+    updates[`zones/${zone.id}/current`] = { density, queue_length, timestamp: now };
+  }
+  for (const stand of CONCESSION_STANDS) {
+    updates[`concessions/${stand.id}`] = calculateConcessionData(stand, elapsedMinutes, activeEvent);
+  }
+
+  try {
+    await db.ref('/').update(updates);
+    console.log(`[SIM] t=${elapsedMinutes.toFixed(1)}min | ${activeEvent ? activeEvent.label : 'Normal ops'} | ${zones.length} zones updated`);
+  } catch (err) {
+    console.error(`[SIM] Firebase write failed: ${err.message}`);
+  }
+}
+
 // ─── Firebase initialization ─────────────────────────────────────
 let db = null;
 
@@ -307,10 +408,14 @@ async function main() {
   startZoneListeners();
   startHeartbeatListener();
 
-  // Wait for Firebase listeners to receive their first batch of zone readings
-  // before starting predictions, so we have real data on cycle #1.
-  console.log('[...] Waiting 30s for initial zone readings to arrive from the simulator...');
-  await sleep(30000);
+  // ── Start built-in simulator ──────────────────────────────────────────────
+  simulatorStartTime = Date.now();
+  console.log('[SIM] Built-in simulator started — writing zone + concession data every 15s');
+  await runSimulatorTick(); // first tick immediately so predictions have fresh data
+  setInterval(runSimulatorTick, 15000);
+
+  // Short wait so first tick is recorded before prediction cycle reads it
+  await sleep(3000);
 
   // Run prediction loop indefinitely
   console.log('[START] Prediction loop starting');
