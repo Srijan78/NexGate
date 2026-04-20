@@ -346,7 +346,7 @@ function startHeartbeatListener() {
   hbRef.on('value', (snap) => {
     const val = snap.val();
     if (val) {
-      const wasIdle = Date.now() - lastActiveTimestamp > 15 * 60 * 1000;
+      const wasIdle = Date.now() - lastActiveTimestamp > 5 * 60 * 1000;
       lastActiveTimestamp = val;
       if (wasIdle && isSleeping && sleepResolve) {
         console.log(
@@ -429,7 +429,7 @@ async function main() {
 
     // Smart Sleep Logic
     const timeSinceActive = Date.now() - lastActiveTimestamp;
-    const isIdle = timeSinceActive > 15 * 60 * 1000; // 15 mins
+    const isIdle = timeSinceActive > 5 * 60 * 1000; // 5 mins
 
     if (isIdle) {
       console.log(
