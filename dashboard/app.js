@@ -126,6 +126,14 @@ async function startFirebaseListeners() {
   sendHeartbeat();
   setInterval(sendHeartbeat, 60000);
 
+  // Wake up Cloud Run backend (for cold starts)
+  const ENGINE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:3001' 
+    : 'https://nexgate-956136466810.europe-west1.run.app';
+  fetch(`${ENGINE_URL}/wakeup`).catch(() => console.warn('Wakeup ping failed (expected if local)'));
+
+  let isFirstLoad = true;
+
   // Zone data listener
   for (const zone of ZONES) {
     const zoneCurrentRef = ref(db, `zones/${zone.id}/current`);
@@ -134,6 +142,11 @@ async function startFirebaseListeners() {
     onValue(zoneCurrentRef, (snap) => {
       const data = snap.val();
       if (data) {
+        if (isFirstLoad) {
+          isFirstLoad = false;
+          const loader = document.getElementById('engine-loader');
+          if (loader) loader.classList.add('hidden');
+        }
         updateZoneCard(zone.id, {
           density: data.density,
           queue_length: data.queue_length,

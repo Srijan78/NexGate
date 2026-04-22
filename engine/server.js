@@ -69,6 +69,12 @@ export function initChatServer(apiKey) {
   });
 }
 
+// ─── GET /wakeup ──────────────────────────────────────────────────────────────
+// Used by the dashboard to wake up the Cloud Run instance from scale-to-zero.
+app.get('/wakeup', (req, res) => {
+  res.json({ status: 'awake', time: Date.now() });
+});
+
 // ─── POST /api/chat ───────────────────────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
   // If the model was not initialized (missing key), return a clean 503
