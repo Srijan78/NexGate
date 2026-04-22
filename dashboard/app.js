@@ -60,6 +60,9 @@ async function init() {
     startFirebaseListeners();
   } else {
     setConnectionStatus('diagnostic', 'Diagnostic Feed');
+    // Hide loader immediately in diagnostic mode (no Firebase to trigger it)
+    const loader = document.getElementById('engine-loader');
+    if (loader) loader.classList.add('hidden');
     startLocalDataMode();
   }
 }
